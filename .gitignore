@@ -100,3 +100,4 @@ InitTestScene*.unity*
 
 # ignore venv
 venv/
+.venv/
