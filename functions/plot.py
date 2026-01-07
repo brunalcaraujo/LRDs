@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 from .spectrum import load_spectrum
 
 
@@ -81,6 +82,8 @@ def make_spectrum_panel(
     if loader_kwargs is None:
         loader_kwargs = {}
 
+    output_flux_scale = None
+
     n_panel = nrows * ncols
     subset = spec_info[start:start + n_panel]
 
@@ -99,6 +102,9 @@ def make_spectrum_panel(
             **loader_kwargs
         )
 
+        if output_flux_scale is None:
+            output_flux_scale = spec.get("output_flux_scale")
+
         plot_spectrum_ax(
             ax,
             spec,
@@ -113,7 +119,18 @@ def make_spectrum_panel(
         ax.axis("off")
 
     fig.supxlabel(r"Rest-frame wavelength [$\mu$m]")
-    fig.supylabel(r"Flux")
+    if output_flux_scale is not None:
+        power = -int(np.log10(output_flux_scale))
+        ylabel = (
+            rf"$F_\lambda$ "
+            rf"($10^{{{power}}}$ erg s$^{{-1}}$ cm$^{{-2}}$ Å$^{{-1}}$)"
+        )
+    else:
+        ylabel = r"$F_\lambda$ (erg s$^{-1}$ cm$^{-2}$ Å$^{-1}$)"
+
+    fig.supylabel(ylabel, fontsize=14)
+
+    #fig.supylabel(r"Flux [10$^{-20}$ erg s$^{-1}$ cm$^{-2}$ Å$^{-1}$]")
 
     plt.tight_layout()
     return fig

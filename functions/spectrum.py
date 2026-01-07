@@ -126,5 +126,6 @@ def load_spectrum(
         "wave": wave,
         "flux": flux,
         "z": z,
-        "file": fits_path
+        "file": fits_path,
+        "output_flux_scale": output_flux_scale,
     }
