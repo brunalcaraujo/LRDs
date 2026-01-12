@@ -67,6 +67,8 @@ def make_spectrum_panel(
     loader_kwargs=None,
 ):
     """
+    Plot a panel of spectra.
+
     Parameters
     ----------
     spec_info : list of (filename, z)
@@ -82,8 +84,6 @@ def make_spectrum_panel(
     if loader_kwargs is None:
         loader_kwargs = {}
 
-    output_flux_scale = None
-
     n_panel = nrows * ncols
     subset = spec_info[start:start + n_panel]
 
@@ -94,6 +94,10 @@ def make_spectrum_panel(
     )
     axes = axes.flatten()
 
+    output_flux_scale = None
+    normalized = None
+    norm_window = None
+
     for ax, (fname, z) in zip(axes, subset):
 
         spec = load_spectrum(
@@ -102,8 +106,25 @@ def make_spectrum_panel(
             **loader_kwargs
         )
 
-        if output_flux_scale is None:
+        # ---- Skip spectra that failed normalization ----
+        if loader_kwargs.get("normalize", False) and not spec["normalized"]:
+            print(
+                f"⚠️ Skipping {fname}: normalization failed "
+                f"({spec['norm_error']})"
+            )
+            ax.axis("off")
+            continue
+
+        # ---- Consistency checks ----
+        if normalized is None:
+            normalized = spec.get("normalized", False)
             output_flux_scale = spec.get("output_flux_scale")
+            norm_window = spec.get("norm_window")
+        else:
+            if spec.get("normalized", False) != normalized:
+                raise ValueError("Inconsistent normalization across spectra")
+            if spec.get("output_flux_scale") != output_flux_scale:
+                raise ValueError("Inconsistent output_flux_scale across spectra")
 
         plot_spectrum_ax(
             ax,
@@ -114,12 +135,17 @@ def make_spectrum_panel(
             ylim=ylim,
             **plot_kwargs
         )
-
+    
+    # Turn off unused axes
     for ax in axes[len(subset):]:
         ax.axis("off")
 
+    # ---- Axis labels ----
     fig.supxlabel(r"Rest-frame wavelength [$\mu$m]")
-    if output_flux_scale is not None:
+
+    if normalized:
+        ylabel = r"Normalized $F_\lambda$"
+    elif output_flux_scale is not None:
         power = -int(np.log10(output_flux_scale))
         ylabel = (
             rf"$F_\lambda$ "
@@ -130,7 +156,6 @@ def make_spectrum_panel(
 
     fig.supylabel(ylabel, fontsize=14)
 
-    #fig.supylabel(r"Flux [10$^{-20}$ erg s$^{-1}$ cm$^{-2}$ Å$^{-1}$]")
 
     plt.tight_layout()
     return fig
