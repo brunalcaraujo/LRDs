@@ -90,7 +90,7 @@ def read_spectrum_fits(
 def normalize_spectrum(
     wave,
     flux,
-    window=(0.28, 0.30),
+    window=(0.34, 0.36),
     statistic="median",
     min_points=5
 ):
@@ -150,7 +150,7 @@ def load_spectrum(
     wave_unit="um",
     restframe=True,
     normalize=False,
-    norm_window=(0.28, 0.30),
+    norm_window=(0.34, 0.36),
     norm_statistic="median",
     output_flux_scale=None, 
 ):
