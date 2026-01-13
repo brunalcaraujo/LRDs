@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from .spectrum import load_spectrum
+import os
 
 
 def plot_spectrum_ax(
@@ -109,7 +110,7 @@ def make_spectrum_panel(
         # ---- Skip spectra that failed normalization ----
         if loader_kwargs.get("normalize", False) and not spec["normalized"]:
             print(
-                f"⚠️ Skipping {fname}: normalization failed "
+                f"⚠️ Skipping {fname}, redshift {z}: normalization failed "
                 f"({spec['norm_error']})"
             )
             ax.axis("off")
@@ -158,4 +159,56 @@ def make_spectrum_panel(
 
 
     plt.tight_layout()
+    return fig
+
+def plot_overlaid_spectra(
+    spec_info,
+    indices,
+    base_path="DeGraaff_espectros",
+    loader_kwargs=None,
+    xlim=(0.2, 0.6),
+    ylim=None,
+    figsize=(7, 5),
+):
+    if loader_kwargs is None:
+        loader_kwargs = {}
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    for i in indices:
+        fname, z = spec_info[i]
+
+        # Convert numpy string → Python string
+        fname = str(fname)
+
+        full_path = os.path.join(base_path, fname)
+
+        try:
+            data = load_spectrum(
+                full_path,
+                z=z,
+                **loader_kwargs
+            )
+        except Exception as e:
+            print(f"Skipping {fname} → {e}")
+            continue
+
+        label = fname.replace(".spec.fits", "")
+        ax.plot(
+            data["wave"],
+            data["flux"],
+            lw=1.2,
+            label=label
+        )
+
+    ax.set_xlim(*xlim)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+
+    ax.set_xlabel(r"Rest-frame wavelength [$\mu$m]")
+    ax.set_ylabel(r"Normalized Flux")
+
+    ax.legend(fontsize=8, frameon=False)
+    fig.tight_layout()
+
     return fig
