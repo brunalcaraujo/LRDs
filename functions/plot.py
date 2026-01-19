@@ -169,6 +169,7 @@ def plot_overlaid_spectra(
     xlim=(0.2, 0.6),
     ylim=None,
     figsize=(7, 5),
+    offset=True,
 ):
     if loader_kwargs is None:
         loader_kwargs = {}
@@ -193,13 +194,23 @@ def plot_overlaid_spectra(
             print(f"Skipping {fname} → {e}")
             continue
 
-        label = fname.replace(".spec.fits", "")
-        ax.plot(
-            data["wave"],
-            data["flux"],
-            lw=1.2,
-            label=label
-        )
+        if offset:
+            label = fname.replace(".spec.fits", "")
+            y_offset = 2 * (i - indices[0])
+
+            y = data["flux"] + y_offset
+            x = data["wave"]
+
+            ax.plot(x, y, lw=1)
+
+            # posição do texto (lado direito do gráfico)
+            x_text = x.max() * 0.99
+            y_text = np.nanmedian(y[-20:])  # usa final do espectro
+
+            ax.text(x_text,y_text,label,color='black',fontsize=8,ha="right",va="center")
+        else:
+            label = fname.replace(".spec.fits", "")
+            ax.plot(data["wave"],data["flux"],lw=1.2,label=label)
 
     ax.set_xlim(*xlim)
     if ylim is not None:
