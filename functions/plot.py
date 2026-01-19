@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
 from .spectrum import load_spectrum
 import os
@@ -161,6 +162,27 @@ def make_spectrum_panel(
     plt.tight_layout()
     return fig
 
+def short_label_from_filename(fname):
+    """
+    Convert:
+    capers-cos07-v4_prism-clear_6368_43711.spec.fits
+    → capers-6368_43711
+    """
+
+    base = os.path.basename(fname)
+
+    # remove sufixo
+    base = base.replace(".spec.fits", "")
+
+    # survey = primeira parte antes do primeiro "-"
+    survey = base.split("-")[0]
+
+    # pega os dois últimos blocos separados por "_"
+    id_part = "_".join(base.split("_")[-2:])
+
+    return f"{survey}-{id_part}"
+
+
 def plot_overlaid_spectra(
     spec_info,
     indices,
@@ -174,10 +196,50 @@ def plot_overlaid_spectra(
     if loader_kwargs is None:
         loader_kwargs = {}
 
+     # --- Fixed rest-frame emission lines (μm) ---
+    emission_lines = {
+        r"[O II]": 0.3727,
+        r"[O III] 4363": 0.4363,
+        r"[O III] 5007": 0.5007,
+        r"H$\beta$": 0.4861,
+        r"H$\alpha$": 0.6563,
+    }
+    
+    n = len(indices)
+    base_cmap = cm.get_cmap("RdPu_r")  # escolha a paleta aqui
+    colors = base_cmap(np.linspace(0.0, 0.7, n))
+
+
     fig, ax = plt.subplots(figsize=figsize)
 
-    for i in indices:
+    # --- Draw emission lines first (background) ---
+    for label, wave0 in emission_lines.items():
+        ax.axvline(
+            wave0,
+            color="gray",
+            ls="--",
+            lw=0.8,
+            alpha=0.6,
+            zorder=0
+        )
+
+        ax.text(
+            wave0,
+            0.98,
+            label,
+            rotation=90,
+            ha="right",
+            va="top",
+            transform=ax.get_xaxis_transform(),
+            fontsize=8,
+            color="gray"
+        )
+
+    # --- Plot spectra ---
+    for j, i in enumerate(indices):
         fname, z = spec_info[i]
+
+        color = colors[j]  # cor específica para este espectro
 
         # Convert numpy string → Python string
         fname = str(fname)
@@ -195,29 +257,31 @@ def plot_overlaid_spectra(
             continue
 
         if offset:
-            label = fname.replace(".spec.fits", "")
-            y_offset = 2 * (i - indices[0])
+            label = short_label_from_filename(fname)
+            y_offset = 2.5 * (i - indices[0])
 
             y = data["flux"] + y_offset
             x = data["wave"]
 
-            ax.plot(x, y, lw=1)
+            #ax.plot(x, y, lw=1)
+            ax.step(x, y, color=color, where="mid", lw=1)
 
             # posição do texto (lado direito do gráfico)
             x_text = x.max() * 0.99
-            y_text = np.nanmedian(y[-20:])  # usa final do espectro
+            dy = 1.1 
+            y_text = np.nanmedian(y[-20:]) + dy
 
             ax.text(x_text,y_text,label,color='black',fontsize=8,ha="right",va="center")
         else:
-            label = fname.replace(".spec.fits", "")
-            ax.plot(data["wave"],data["flux"],lw=1.2,label=label)
+            label = short_label_from_filename(fname)
+            ax.step(data["wave"],data["flux"],where='mid',lw=1.2,label=label)
 
     ax.set_xlim(*xlim)
     if ylim is not None:
         ax.set_ylim(*ylim)
 
     ax.set_xlabel(r"Rest-frame wavelength [$\mu$m]")
-    ax.set_ylabel(r"Normalized Flux")
+    ax.set_ylabel(r"Normalized Flux (arbitrary units)")
 
     ax.legend(fontsize=8, frameon=False)
     fig.tight_layout()
