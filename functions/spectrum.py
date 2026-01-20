@@ -1,5 +1,6 @@
 import numpy as np
 from astropy.io import fits
+from scipy.signal import savgol_filter
 import warnings
 
 def fnu_to_flambda(fnu, wave, wave_unit="um"):
@@ -143,6 +144,59 @@ def normalize_spectrum(
     return flux_norm, norm_factor
 
 
+def smooth_spectrum(
+    flux,
+    method="savgol",
+    window=11,
+    polyorder=2,
+):
+    """
+    Smooth a spectrum flux array.
+
+    Parameters
+    ----------
+    flux : array_like
+        Flux array
+    method : {'savgol', 'boxcar'}
+        Smoothing method
+    window : int
+        Window size (number of points)
+    polyorder : int
+        Polynomial order for Savitzky-Golay filter
+
+    Returns
+    -------
+    flux_smooth : ndarray
+        Smoothed flux
+    """
+
+    flux = np.asarray(flux)
+
+    # Remove NaNs via interpolation
+    if np.any(~np.isfinite(flux)):
+        x = np.arange(len(flux))
+        mask = np.isfinite(flux)
+        if mask.sum() < 5:
+            raise ValueError("Too many NaNs for smoothing")
+        flux = np.interp(x, x[mask], flux[mask])
+
+    n = len(flux)
+
+    if window >= n:
+        raise ValueError("Smoothing window larger than spectrum")
+
+    if method == "savgol":
+        if window % 2 == 0:
+            window += 1
+        return savgol_filter(flux, window_length=window, polyorder=polyorder)
+
+    elif method == "boxcar":
+        kernel = np.ones(window) / window
+        return np.convolve(flux, kernel, mode="same")
+
+    else:
+        raise ValueError("method must be 'savgol' or 'boxcar'")
+
 def load_spectrum(
     fits_path,
     z=None,
@@ -152,7 +206,12 @@ def load_spectrum(
     normalize=False,
     norm_window=(0.3546,0.3746), #ao redor de 3646
     norm_statistic="median",
-    output_flux_scale=None, 
+    output_flux_scale=None,
+    smooth=False,
+    smooth_method="savgol",
+    smooth_window=11,
+    smooth_polyorder=2,
+ 
 ):
     """
     Load a spectrum, convert units, optionally shift to rest frame
@@ -173,6 +232,24 @@ def load_spectrum(
     # ---- Rest-frame correction ----
     if restframe and z is not None:
         wave, flux = to_restframe(wave, flux, z, flux_type)
+
+    # ---- Smoothing ----
+    smoothed = False
+    smooth_error = None
+
+    if smooth:
+        try:
+            flux = smooth_spectrum(
+                flux,
+                method=smooth_method,
+                window=smooth_window,
+                polyorder=smooth_polyorder,
+            )
+            smoothed = True
+        except ValueError as e:
+            smooth_error = str(e)
+            smoothed = False
+
 
     # ---- Normalization ----
     norm_factor = None
@@ -207,5 +284,9 @@ def load_spectrum(
         "norm_window": norm_window if normalized else None,
         "norm_factor": norm_factor,
         "norm_error": norm_error,
+        "smoothed": smoothed,
+        "smooth_method": smooth_method if smoothed else None,
+        "smooth_window": smooth_window if smoothed else None,
+        "smooth_error": smooth_error,
         "output_flux_scale": output_flux_scale,
     }
