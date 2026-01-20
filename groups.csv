@@ -19,7 +19,7 @@ capers-udsp2-v4_prism-clear_6368_10997.spec.fits,5.1536555,G3
 capers-udsp2-v4_prism-clear_6368_15322.spec.fits,3.70188,G2
 ceers-ddt-v4_prism-clear_2750_1768.spec.fits,5.0884247,G2
 ceers-ddt-v4_prism-clear_2750_2015.spec.fits,4.8925524,G4
-ceers-v4_prism-clear_1345_746.spec.fits,5.629804398175934,G4
+ceers-v4_prism-clear_1345_746.spec.fits,5.629804398175934,G5
 ceers-v4_prism-clear_1345_80457.spec.fits,4.2225738,G3
 cosmos-transients-v4_prism-clear_6585_58018.spec.fits,3.9262767,G2
 cosmos-transients-v4_prism-clear_6585_61234.spec.fits,7.003398,G2
@@ -59,7 +59,7 @@ macs1423-v4_prism-clear_1208_4103248.spec.fits,5.774661,G2
 macs1423-v4_prism-clear_1208_4111584.spec.fits,4.0656843,G1
 macsj0647-v4_prism-clear_1433_1045.spec.fits,4.5276384,G2
 nexus-obs3-v4_prism-clear_5105_10835.spec.fits,4.65012,G2
-nexus-obs3-v4_prism-clear_5105_10868.spec.fits,4.38856,G2
+nexus-obs3-v4_prism-clear_5105_10868.spec.fits,4.38856,G3
 nexus-obs3-v4_prism-clear_5105_12143.spec.fits,5.86735,G4
 nexus-obs3-v4_prism-clear_5105_21941.spec.fits,3.67055,G2
 nexus-obs3-v4_prism-clear_5105_23192.spec.fits,4.52104729497047,G3
@@ -89,7 +89,7 @@ rubies-uds1-v4_prism-clear_4233_928474.spec.fits,6.929497,G4
 rubies-uds21-v4_prism-clear_4233_175975.spec.fits,2.9519691,G2
 rubies-uds21-v4_prism-clear_4233_182791.spec.fits,4.717405,G2
 rubies-uds22-v4_prism-clear_4233_119957.spec.fits,4.151636,G2
-rubies-uds22-v4_prism-clear_4233_139709.spec.fits,5.68399,G4
+rubies-uds22-v4_prism-clear_4233_139709.spec.fits,5.68399,G5
 rubies-uds23-v4_prism-clear_4233_144195.spec.fits,3.3547552,G3
 rubies-uds23-v4_prism-clear_4233_167741.spec.fits,4.1157036,G1
 rubies-uds23-v4_prism-clear_4233_172350.spec.fits,5.5864534,G2
@@ -101,14 +101,14 @@ rubies-uds31-v4_prism-clear_4233_981721.spec.fits,7.1974497,G4
 rubies-uds33-v4_prism-clear_4233_29813.spec.fits,5.442071,G1
 rubies-uds33-v4_prism-clear_4233_53692.spec.fits,5.2792883,G2
 rubies-uds42-v4_prism-clear_4233_23438.spec.fits,3.6860464,G2
-rubies-uds42-v4_prism-clear_4233_807469.spec.fits,6.7795324,G4
+rubies-uds42-v4_prism-clear_4233_807469.spec.fits,6.7795324,G5
 rubies-uds43-v4_prism-clear_4233_40800.spec.fits,4.982409,G4
 rubies-uds43-v4_prism-clear_4233_848745.spec.fits,7.1175017,G4
 rxj2129-ddt-v4_prism-clear_2767_11024.spec.fits,4.2948875,G4
 uncover-61-v4_prism-clear_2561_20698.spec.fits,2.417316,G3
 uncover-61-v4_prism-clear_2561_21547.spec.fits,5.0578914,G2
 uncover-61-v4_prism-clear_2561_24968.spec.fits,6.3467827,G1
-uncover-61-v4_prism-clear_2561_27114.spec.fits,5.1957436,G2
+uncover-61-v4_prism-clear_2561_27114.spec.fits,5.1957436,G3
 uncover-62-v4_prism-clear_2561_24175.spec.fits,7.0356536,G3
 uncover-62-v4_prism-clear_2561_58453.spec.fits,4.471244,G3
 uncover-v4_prism-clear_2561_13123.spec.fits,7.0370483,G2
@@ -119,4 +119,4 @@ uncover-v4_prism-clear_2561_28876.spec.fits,7.0362444,G2
 uncover-v4_prism-clear_2561_38108.spec.fits,4.968462,G1
 uncover-v4_prism-clear_2561_4286.spec.fits,5.8352246,G2
 uncover-v4_prism-clear_2561_45924.spec.fits,4.463361263885918,G3
-uncover-v4_prism-clear_2561_49702.spec.fits,4.866683,G2
+uncover-v4_prism-clear_2561_49702.spec.fits,4.866683,G4

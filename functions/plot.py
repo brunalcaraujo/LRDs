@@ -212,6 +212,14 @@ def plot_overlaid_spectra(
 
     fig, ax = plt.subplots(figsize=figsize)
 
+    # --- FIXO: definir limites ANTES de usar get_xlim/get_ylim ---
+    ax.set_xlim(*xlim)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+
     # --- Draw emission lines first (background) ---
     for label, wave0 in emission_lines.items():
         ax.axvline(
@@ -267,11 +275,32 @@ def plot_overlaid_spectra(
             ax.step(x, y, color=color, where="mid", lw=1)
 
             # posição do texto (lado direito do gráfico)
-            x_text = x.max() * 0.99
-            dy = 1.1 
-            y_text = np.nanmedian(y[-20:]) + dy
+            #xmin, xmax = ax.get_xlim()
 
-            ax.text(x_text,y_text,label,color='black',fontsize=8,ha="right",va="center")
+            axis_width = xmax - xmin
+            free_space = xmax - x.max()
+
+            if free_space >= 0.2 * axis_width: 
+                # cabe texto fora do espectro
+                x_text = x.max() * 1.01
+                ha = "left"
+            else:
+                # coloca dentro do espectro
+                x_text = x.max() * 0.99
+                ha = "right"
+
+            dy = 1.15
+            y_text = np.nanmedian(y[-100:-5]) + dy
+
+            ax.text(
+                x_text,
+                y_text,
+                label,
+                fontsize=8,
+                ha=ha,
+                va="center"
+            )
+
         else:
             label = short_label_from_filename(fname)
             ax.step(data["wave"],data["flux"],where='mid',lw=1.2,label=label)
