@@ -30,7 +30,40 @@ def plot_spectrum_ax(
         Passed directly to ax.plot()
     """
 
-    ax.plot(
+     # --- Fixed rest-frame emission lines (μm) ---
+    emission_lines = {
+        r"[O II]": 0.3727,
+        r"[O III] 4363": 0.4363,
+        r"[O III] 5007": 0.5007,
+        r"H$\beta$": 0.4861,
+        r"H$\alpha$": 0.6563,
+    }
+
+    # --- Draw emission lines first (background) ---
+    for label, wave0 in emission_lines.items():
+        ax.axvline(
+            wave0,
+            color="gray",
+            ls="--",
+            lw=0.8,
+            alpha=0.6,
+            zorder=0
+        )
+
+        ax.text(
+            wave0,
+            0.98,
+            label,
+            rotation=90,
+            ha="right",
+            va="top",
+            transform=ax.get_xaxis_transform(),
+            fontsize=8,
+            color="gray"
+        )
+
+
+    ax.step(
         spectrum["wave"],
         spectrum["flux"],
         **plot_kwargs
