@@ -82,7 +82,7 @@ def plot_spectrum_ax(
 
         ax.text(
             wave0,
-            0.80,
+            0.78,
             label,
             rotation=90,
             ha="right",
