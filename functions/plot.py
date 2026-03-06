@@ -30,23 +30,30 @@ def plot_spectrum_ax(
         Passed directly to ax.plot()
     """
 
-     # --- Fixed rest-frame emission lines (μm) ---
+    # --- Fixed rest-frame emission lines (μm) ---
     emission_lines = {
         r"[O II]": 0.3727,
-        r"[O III] 4363": 0.4363,
-        r"[O III] 5007": 0.5007,
-        r"H$\beta$": 0.4861,
-        r"H$\alpha$": 0.6563,
+        r"[Ne III]": 0.386876,
+        r"[O III] 4363": 0.436321,
+        r"[O III] 5007": 0.5006843,   	
     }
 
+    H_emission_lines = {
+        r"H$\beta$": 0.48613,
+        r"H$\alpha$": 0.6563,
+        r"H$\epsilon$": 0.3970079,
+        r"H$\gamma$": 0.4340471,
+        r"H$\delta$": 0.4101742,
+    }
+    
     # --- Draw emission lines first (background) ---
     for label, wave0 in emission_lines.items():
         ax.axvline(
             wave0,
-            color="gray",
+            color="black",
             ls="--",
             lw=0.8,
-            alpha=0.6,
+            alpha=0.7,
             zorder=0
         )
 
@@ -62,6 +69,28 @@ def plot_spectrum_ax(
             color="gray"
         )
 
+    # --- Draw H series emission lines first (background) ---
+    for label, wave0 in H_emission_lines.items():
+        ax.axvline(
+            wave0,
+            color="deeppink",
+            ls="--",
+            lw=0.8,
+            alpha=0.7,
+            zorder=0
+        )
+
+        ax.text(
+            wave0,
+            0.80,
+            label,
+            rotation=90,
+            ha="right",
+            va="top",
+            transform=ax.get_xaxis_transform(),
+            fontsize=8,
+            color="deeppink"
+        )
 
     ax.step(
         spectrum["wave"],
@@ -232,16 +261,22 @@ def plot_overlaid_spectra(
      # --- Fixed rest-frame emission lines (μm) ---
     emission_lines = {
         r"[O II]": 0.3727,
-        r"[O III] 4363": 0.4363,
-        r"[O III] 5007": 0.5007,
-        r"H$\beta$": 0.4861,
+        r"[Ne III]": 0.386876,
+        r"[O III] 4363": 0.436321,
+        r"[O III] 5007": 0.5006843,   	
+    }
+
+    H_emission_lines = {
+        r"H$\beta$": 0.48613,
         r"H$\alpha$": 0.6563,
+        r"H$\epsilon$": 0.3970079,
+        r"H$\gamma$": 0.4340471,
+        r"H$\delta$": 0.4101742,
     }
     
     n = len(indices)
     base_cmap = cm.get_cmap("RdPu_r")  # escolha a paleta aqui
     colors = base_cmap(np.linspace(0.0, 0.7, n))
-
 
     fig, ax = plt.subplots(figsize=figsize)
 
@@ -267,6 +302,29 @@ def plot_overlaid_spectra(
         ax.text(
             wave0,
             0.98,
+            label,
+            rotation=90,
+            ha="right",
+            va="top",
+            transform=ax.get_xaxis_transform(),
+            fontsize=8,
+            color="gray"
+        )
+
+    # --- Draw H series emission lines first (background) ---
+    for label, wave0 in H_emission_lines.items():
+        ax.axvline(
+            wave0,
+            color="deeppink",
+            ls="--",
+            lw=0.8,
+            alpha=0.6,
+            zorder=0
+        )
+
+        ax.text(
+            wave0,
+            0.80,
             label,
             rotation=90,
             ha="right",
