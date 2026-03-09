@@ -407,3 +407,358 @@ def plot_overlaid_spectra(
     fig.tight_layout()
 
     return fig
+
+def plot_spectrum_presentation(
+    fname,
+    z,
+    base_path="DeGraaff_espectros",
+    lines=None,
+    loader_kwargs=None,
+    figsize=(8,5),
+    xlim=None,
+    ylim=None,
+    title=None,
+    spectrum_kwargs=None,
+    line_kwargs=None,
+):
+    """
+    Plot a single spectrum optimized for presentations.
+
+    Parameters
+    ----------
+    fname : str
+        Spectrum filename
+    z : float
+        Redshift
+    lines : dict or None
+        Emission lines to display {label: wavelength}
+        If None, a default set is used
+    spectrum_kwargs : dict
+        kwargs passed to ax.step()
+    line_kwargs : dict
+        kwargs passed to ax.axvline()
+    """
+
+    import os
+    import matplotlib.pyplot as plt
+
+    if loader_kwargs is None:
+        loader_kwargs = {}
+
+    if spectrum_kwargs is None:
+        spectrum_kwargs = dict(color="black", lw=1.5, where="mid")
+
+    if line_kwargs is None:
+        line_kwargs = dict(color="gray", ls="--", lw=1, alpha=0.7)
+
+    # Default emission lines
+    if lines is None:
+        lines = {
+            r"[O II]": 0.3727,
+            r"[Ne III]": 0.386876,
+            r"H$\epsilon$": 0.3970079,
+            r"H$\delta$": 0.4101742,
+            r"H$\gamma$": 0.4340471,
+            r"H$\beta$": 0.48613,
+            r"[O III]": 0.5006843,
+            r"He I 5876": 0.5875624,
+            r"[O I]": 0.6300,
+            r"H$\alpha$": 0.6563,
+            r"[S II]": 0.6723,
+            r"He I 7065": 0.7065,
+            #r"He I 10830": 1.0830,
+        }
+
+    full_path = os.path.join(base_path, fname)
+
+    spec = load_spectrum(
+        full_path,
+        z=z,
+        **loader_kwargs
+    )
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Plot spectrum
+    ax.step(
+        spec["wave"],
+        spec["flux"],
+        **spectrum_kwargs
+    )
+
+    # ---- Sort lines by wavelength ----
+    sorted_lines = sorted(lines.items(), key=lambda x: x[1])
+
+    # Levels used to avoid overlap
+    levels = [0.98, 0.88, 0.98, 0.88]
+
+    prev_wave = None
+    level_index = 0
+
+    for label, wave0 in sorted_lines:
+
+        # Detect if lines are very close
+        if prev_wave is not None and abs(wave0 - prev_wave) < 0.017:
+            level_index += 1
+        else:
+            level_index = 0
+
+        y = levels[level_index % len(levels)]
+
+        # --- choose color ---
+        if "H$" in label:
+            color = "red"
+        else:
+            color = "gray"
+
+        # vertical line
+        ax.axvline(
+            wave0,
+            color=color,
+            ls="--",
+            lw=1,
+            alpha=0.8
+        )   
+
+        ax.text(
+            wave0,
+            y,
+            label,
+            rotation=90,
+            ha="right",
+            va="top",
+            transform=ax.get_xaxis_transform(),
+            fontsize=11
+        )
+
+        prev_wave = wave0
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    ax.set_xlabel(r"Rest-frame wavelength [$\mu$m]", fontsize=13)
+    ax.set_ylabel(r"Normalized $F_\lambda$", fontsize=13)
+
+    if title is None:
+        title = short_label_from_filename(fname)
+
+    ax.set_title(title, fontsize=14)
+
+    ax.text(
+        0.15, 0.95,
+        f"z = {z:.3f}",
+        transform=ax.transAxes,
+        ha="right",
+        va="top",
+        fontsize=12
+    )
+
+    ax.grid(alpha=0.3)
+
+    # --- Tick configuration ---
+    ax.minorticks_on()
+
+    ax.tick_params(
+        axis="both",
+        which="major",
+        direction="in",
+        length=6,
+        width=1.2,
+        labelsize=11,
+        top=True, right=True
+    )
+
+    ax.tick_params(
+        axis="both",
+        which="minor",
+        direction="in",
+        length=3,
+        width=1,
+        top=True, right=True
+    )
+
+    # --- Border thickness ---
+    for spine in ax.spines.values():
+        spine.set_linewidth(1.2)
+
+    fig.tight_layout()
+
+    return fig, ax
+
+def plot_spectrum_shaded_lines(
+    fname,
+    z,
+    base_path="DeGraaff_espectros",
+    lines=None,
+    loader_kwargs=None,
+    figsize=(8,5),
+    xlim=None,
+    ylim=None,
+    title=None,
+    spectrum_kwargs=None,
+    shade_width=0.002,
+):
+    """
+    Plot spectrum with shaded regions marking emission lines.
+    Hydrogen lines are shown in red, others in gray.
+    """
+
+    import os
+    import matplotlib.pyplot as plt
+
+    if loader_kwargs is None:
+        loader_kwargs = {}
+
+    if spectrum_kwargs is None:
+        spectrum_kwargs = dict(color="black", lw=1.4, where="mid")
+
+    # Default emission lines
+    if lines is None:
+        lines = {
+            r"[O II]": 0.3727,
+            r"[Ne III]": 0.386876,
+            r"H$\epsilon$": 0.3970079,
+            r"H$\delta$": 0.4101742,
+            r"H$\gamma$": 0.4340471,
+            r"H$\beta$": 0.48613,
+            r"[O III]": 0.5006843,
+            r"He I 5876": 0.5875624,
+            r"[O I]": 0.6300,
+            r"H$\alpha$": 0.6563,
+            r"[S II]": 0.6723,
+            r"He I 7065": 0.7065,
+            r"He I 10830": 1.0830,
+        }
+
+    full_path = os.path.join(base_path, fname)
+
+    spec = load_spectrum(
+        full_path,
+        z=z,
+        **loader_kwargs
+    )
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # Plot spectrum
+    ax.step(
+        spec["wave"],
+        spec["flux"],
+        **spectrum_kwargs
+    )
+
+    # ---- Sort lines by wavelength ----
+    sorted_lines = sorted(lines.items(), key=lambda x: x[1])
+
+    # label vertical levels
+    levels = [0.98, 0.88, 0.98, 0.88]
+
+    prev_wave = None
+    level_index = 0
+
+    for label, wave0 in sorted_lines:
+
+        if prev_wave is not None and abs(wave0 - prev_wave) < 0.015:
+            level_index += 1
+        else:
+            level_index = 0
+
+        y = levels[level_index % len(levels)]
+
+        # choose color
+        if "H$" in label:
+            color = "firebrick"
+        else:
+            color = "gray"
+
+        # shaded region
+        ax.axvspan(
+            wave0 - shade_width,
+            wave0 + shade_width,
+            color=color,
+            alpha=0.18,
+            zorder=0
+        )
+
+        # central line
+        ax.axvline(
+            wave0,
+            color=color,
+            lw=1,
+            alpha=0.4,
+            zorder=1
+        )
+
+        # label
+        ax.text(
+            wave0,
+            y,
+            label,
+            rotation=90,
+            ha="center",
+            va="top",
+            transform=ax.get_xaxis_transform(),
+            fontsize=11,
+            color=color
+        )
+
+        prev_wave = wave0
+
+    if xlim is not None:
+        ax.set_xlim(xlim)
+
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    # Axis labels
+    ax.set_xlabel(r"Rest-frame wavelength [$\mu$m]", fontsize=13)
+    ax.set_ylabel(r"Flux", fontsize=13)
+
+    if title is None:
+        title = short_label_from_filename(fname)
+
+    ax.set_title(title, fontsize=14)
+
+    ax.text(
+        0.15, 0.95,
+        f"z = {z:.3f}",
+        transform=ax.transAxes,
+        ha="right",
+        va="top",
+        fontsize=12
+    )
+
+    # ---- Style adjustments ----
+    ax.minorticks_on()
+
+    ax.tick_params(
+        axis="both",
+        which="major",
+        direction="in",
+        length=6,
+        width=1.2,
+        labelsize=11,
+        top=True,
+        right=True
+    )
+
+    ax.tick_params(
+        axis="both",
+        which="minor",
+        direction="in",
+        length=3,
+        width=1
+    )
+
+    # thicker border
+    for spine in ax.spines.values():
+        spine.set_linewidth(1.2)
+
+    ax.grid(alpha=0.25)
+
+    fig.tight_layout()
+
+    return fig, ax
