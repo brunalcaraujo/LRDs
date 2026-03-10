@@ -454,6 +454,13 @@ def plot_spectrum_presentation(
     # Default emission lines
     if lines is None:
         lines = {
+            r"Ly$\alpha$": 0.121567,
+            r"N V": 0.1240,
+            r"Si IV": 0.140277,
+            r"C IV": 0.1549,
+            r"He II": 0.1640,
+            r"C III]": 0.1909,
+            r"Mg II]": 0.2800,
             r"[O II]": 0.3727,
             r"[Ne III]": 0.386876,
             r"H$\epsilon$": 0.3970079,
@@ -466,7 +473,11 @@ def plot_spectrum_presentation(
             r"H$\alpha$": 0.6563,
             r"[S II]": 0.6723,
             r"He I 7065": 0.7065,
-            #r"He I 10830": 1.0830,
+            r"O I 8446": 0.8446,
+            r"He I 10030": 1.0030,
+            r"Pa$\delta$": 1.0049,
+            r"He I 10830": 1.0830,
+            r"Pa$\gamma$": 1.0938,
         }
 
     full_path = os.path.join(base_path, fname)
@@ -490,7 +501,8 @@ def plot_spectrum_presentation(
     sorted_lines = sorted(lines.items(), key=lambda x: x[1])
 
     # Levels used to avoid overlap
-    levels = [0.98, 0.88, 0.98, 0.88]
+    levels = [0.98, 0.78, 0.98, 0.78]
+    ha_lines = ['right', 'left', 'right', 'left']
 
     prev_wave = None
     level_index = 0
@@ -504,12 +516,15 @@ def plot_spectrum_presentation(
             level_index = 0
 
         y = levels[level_index % len(levels)]
+        ha = ha_lines[level_index % len(ha_lines)]
 
         # --- choose color ---
         if "H$" in label:
             color = "red"
+            text_color = "red"
         else:
             color = "gray"
+            text_color = "black"
 
         # vertical line
         ax.axvline(
@@ -517,7 +532,7 @@ def plot_spectrum_presentation(
             color=color,
             ls="--",
             lw=1,
-            alpha=0.8
+            alpha=0.6
         )   
 
         ax.text(
@@ -525,10 +540,11 @@ def plot_spectrum_presentation(
             y,
             label,
             rotation=90,
-            ha="right",
+            ha=ha,
             va="top",
             transform=ax.get_xaxis_transform(),
-            fontsize=11
+            fontsize=11,
+            color=text_color
         )
 
         prev_wave = wave0
@@ -545,16 +561,7 @@ def plot_spectrum_presentation(
     if title is None:
         title = short_label_from_filename(fname)
 
-    ax.set_title(title, fontsize=14)
-
-    ax.text(
-        0.15, 0.95,
-        f"z = {z:.3f}",
-        transform=ax.transAxes,
-        ha="right",
-        va="top",
-        fontsize=12
-    )
+    ax.set_title(f"{title} (z = {z:.3f})", fontsize=14)
 
     ax.grid(alpha=0.3)
 
