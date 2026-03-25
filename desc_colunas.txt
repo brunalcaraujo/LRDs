@@ -1,0 +1,41 @@
+DESCRIÇÃO DAS COLUNAS DA TABELA
+
+Identificação:
+
+* pid: identificador do programa/observação
+* srcid: identificador único da fonte
+* root: nome raiz do objeto
+* file: nome do arquivo do espectro
+
+Coordenadas e redshift:
+
+* ra: ascensão reta
+* dec: declinação
+* zspec, z: redshift espectroscópico
+
+Percentis:
+Colunas com sufixos _0, _1, _2, _3, _4 correspondem aos percentis:
+_0 = 5%
+_1 = 16%
+_2 = 50% (mediana)
+_3 = 84%
+_4 = 95%
+
+Parâmetros espectrais:
+
+* Balmer_dec_total_[0–4]: decremento de Balmer (Hα/Hβ)
+* LHa_total_[0–4]: luminosidade da linha Hα (erg s⁻¹)
+* LHb_total_2: luminosidade da linha Hβ (mediana) (calculado com LHa_total_2/Balmer_dec_total_2)
+* LOIII_5007_[0–4]: luminosidade da linha [OIII] 5007 (erg s⁻¹)
+* logL_5100_[0–4]: log da luminosidade em 5100 Å (erg s⁻¹)
+
+Razões de linhas:
+
+* LOIII/LHb: razão entre [OIII] e Hβ (calculado como LOIII_5007_2/LHb_total_2)
+
+
+Observações:
+
+* Usar preferencialmente valores _2 (mediana)
+* Incertezas podem ser estimadas com _1 e _3
+
