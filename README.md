@@ -5,3 +5,7 @@ This repository contains the spectra of LRDs from [de Graaff et al (2025)](https
 Here, we have 121 spectra from 103 different sources. We did not find the spectra of 13 objects from the program MoM (GO-5224; PIs: Oesch & Naidu).
 
 Find more details about each object in [de Graaff's catalog](deGraaff2025_lrds_withdups_blackbody_eline_fits.fits).  
+
+Para fazer:
+- Como lidar com os espectros duplicados?
+- Retirar os ruidosos. Que critério utilizar?
