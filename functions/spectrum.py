@@ -70,7 +70,8 @@ def to_restframe(wave, flux, z, flux_type="flambda"):
 def read_spectrum_fits(
     fits_path,
     wave_col="wave",
-    flux_col="flux"
+    flux_col="flux",
+    err_col="err"
 ):
     """
     Read wavelength and flux from a FITS spectrum.
@@ -85,8 +86,9 @@ def read_spectrum_fits(
         data = hdul[1].data
         wave = np.asarray(data[wave_col])
         flux = np.asarray(data[flux_col])
+        err = np.asarray(data[err_col])
 
-    return wave, flux
+    return wave, flux, err
 
 def normalize_spectrum(
     wave,
@@ -218,13 +220,18 @@ def load_spectrum(
     and normalize.
     """
 
-    wave, flux = read_spectrum_fits(fits_path)
+    wave, flux, err = read_spectrum_fits(fits_path)
 
     # ---- Flux unit conversion ----
     if input_flux_unit == "uJy":
         fnu = flux * 1e-29
+        err_fnu = err * 1e-29
+
         flambda = fnu_to_flambda(fnu, wave, wave_unit)
+        err_flambda = fnu_to_flambda(err_fnu, wave, wave_unit)
+
         flux = flambda
+        err = err_flambda
         flux_type = "flambda"
     else:
         raise NotImplementedError("Only uJy implemented for now")
@@ -232,6 +239,13 @@ def load_spectrum(
     # ---- Rest-frame correction ----
     if restframe and z is not None:
         wave, flux = to_restframe(wave, flux, z, flux_type)
+
+        # aplicar MESMA transformação no erro
+        z1 = 1.0 + z
+        if flux_type == "flambda":
+            err = err * z1
+        elif flux_type == "fnu":
+            err = err / z1
 
     # ---- Smoothing ----
     smoothed = False
@@ -264,6 +278,7 @@ def load_spectrum(
                 window=norm_window,
                 statistic=norm_statistic,
             )
+            err = err / norm_factor #normalizando o erro também
             normalized = True
 
         except ValueError as e:
@@ -274,6 +289,9 @@ def load_spectrum(
     # ---- Optional scaling (for plotting convenience) ----
     if output_flux_scale is not None:
         flux = flux * output_flux_scale
+
+    # ---- Noise calculation ----
+    noise_metrics = compute_noise_metrics(wave, flux, err)
 
     return {
         "wave": wave,
@@ -289,4 +307,101 @@ def load_spectrum(
         "smooth_window": smooth_window if smoothed else None,
         "smooth_error": smooth_error,
         "output_flux_scale": output_flux_scale,
+        "noise": noise_metrics,
     }
+
+
+def compute_noise_metrics(
+    wave,
+    flux,
+    err=None,
+    smooth=True,
+    smooth_window=21,
+    smooth_polyorder=2,
+):
+    """
+    Compute noise metrics for a spectrum.
+
+    Parameters
+    ----------
+    wave : array
+    flux : array
+    err : array or None
+        Per-pixel uncertainty
+    smooth : bool
+        Whether to estimate empirical noise
+    """
+
+    wave = np.asarray(wave)
+    flux = np.asarray(flux)
+
+    # Remove invalid values
+    mask = np.isfinite(flux)
+    if err is not None:
+        err = np.asarray(err)
+        mask &= np.isfinite(err) & (err > 0)
+
+    flux = flux[mask]
+    if err is not None:
+        err = err[mask]
+
+    results = {}
+
+    # -----------------------------
+    # (A) Noise from error array
+    # -----------------------------
+    if err is not None:
+        noise_median = np.median(err)
+        snr = flux / err
+        snr_median = np.median(snr)
+    else:
+        noise_median = np.nan
+        snr_median = np.nan
+
+    results["noise_from_err"] = noise_median
+    results["snr_median"] = snr_median
+
+    # -----------------------------
+    # (B) Empirical noise
+    # -----------------------------
+    if smooth:
+        try:
+            flux_smooth = smooth_spectrum(
+                flux,
+                method="savgol",
+                window=smooth_window,
+                polyorder=smooth_polyorder,
+            )
+
+            residuals = flux - flux_smooth
+            noise_empirical = np.std(residuals)
+
+        except Exception:
+            noise_empirical = np.nan
+    else:
+        noise_empirical = np.nan
+
+    results["noise_empirical"] = noise_empirical
+
+    # -----------------------------
+    # (C) Robust SNR (median-based)
+    # -----------------------------
+    if err is not None:
+        snr_robust = np.nanmedian(flux) / np.nanmedian(err)
+    else:
+        snr_robust = np.nan
+
+    results["snr_robust"] = snr_robust
+
+
+    # -----------------------------
+    # (D) Empirical SNR
+    # -----------------------------
+    if np.isfinite(noise_empirical) and noise_empirical > 0:
+        snr_empirical = np.nanmedian(flux) / noise_empirical
+    else:
+        snr_empirical = np.nan
+
+    results["snr_empirical"] = snr_empirical
+
+    return results
