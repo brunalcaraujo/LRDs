@@ -80,6 +80,7 @@ def read_spectrum_fits(
     -------
     wave : ndarray
     flux : ndarray
+    err : ndarray
     """
 
     with fits.open(fits_path) as hdul:
@@ -296,6 +297,7 @@ def load_spectrum(
     return {
         "wave": wave,
         "flux": flux,
+        "err": err,
         "z": z,
         "file": fits_path,
         "normalized": normalized,
