@@ -94,6 +94,7 @@ def read_spectrum_fits(
 def normalize_spectrum(
     wave,
     flux,
+    err=None,
     window=(0.3546,0.3746), #ao redor de 3646
     statistic="median",
     min_points=4
@@ -107,6 +108,8 @@ def normalize_spectrum(
         Wavelength array (rest-frame)
     flux : array_like
         Flux array
+    err : array_like
+        Error array
     window : tuple
         (lambda_min, lambda_max) in same units as wave
     statistic : {'median', 'mean'}
@@ -125,6 +128,9 @@ def normalize_spectrum(
     wave = np.asarray(wave)
     flux = np.asarray(flux)
 
+    if err is not None:
+        err = np.asarray(err)
+
     mask = (wave >= window[0]) & (wave <= window[1])
 
     if mask.sum() < min_points:
@@ -132,6 +138,7 @@ def normalize_spectrum(
             f"Not enough points in normalization window {window}"
         )
 
+    # ---- continuum level -----
     if statistic == "median":
         norm_factor = np.nanmedian(flux[mask])
     elif statistic == "mean":
@@ -144,7 +151,19 @@ def normalize_spectrum(
 
     flux_norm = flux / norm_factor
 
-    return flux_norm, norm_factor
+    # ---- normalize error ----
+    if err is not None:
+        err_norm = err / norm_factor
+
+        # estatística do erro na janela
+        err_window_mean = np.nanmean(err_norm[mask])
+        err_window_median = np.nanmedian(err_norm[mask])
+    else:
+        err_norm = None
+        err_window_mean = None
+        err_window_median = None
+
+    return flux_norm, err_norm, norm_factor, err_window_mean, err_window_median
 
 
 
@@ -199,26 +218,25 @@ def load_spectrum(
 
     if normalize:
         try:
-            flux, norm_factor = normalize_spectrum(
+            flux, err, norm_factor, err_mean, err_median = normalize_spectrum(
                 wave,
                 flux,
+                err=err,
                 window=norm_window,
                 statistic=norm_statistic,
             )
-            err = err / norm_factor #normalizando o erro também
+
             normalized = True
 
         except ValueError as e:
-            # Store error information, but DO NOT crash
             norm_error = str(e)
             normalized = False
+            err_mean = None
+            err_median = None
 
     # ---- Optional scaling (for plotting convenience) ----
     if output_flux_scale is not None:
         flux = flux * output_flux_scale
-
-    # ---- Noise calculation ----
-    noise_metrics = compute_noise_metrics(wave, flux, err)
 
     return {
         "wave": wave,
@@ -230,71 +248,8 @@ def load_spectrum(
         "norm_window": norm_window if normalized else None,
         "norm_factor": norm_factor,
         "norm_error": norm_error,
+        "norm_err_mean": err_mean,
+        "norm_err_median": err_median,
         "output_flux_scale": output_flux_scale,
-        "noise": noise_metrics,
     }
 
-
-def compute_noise_metrics(
-    wave,
-    flux,
-    err=None,
-    smooth=True,
-    smooth_window=21,
-    smooth_polyorder=2,
-):
-    """
-    Compute noise metrics for a spectrum.
-
-    Parameters
-    ----------
-    wave : array
-    flux : array
-    err : array or None
-        Per-pixel uncertainty
-    smooth : bool
-        Whether to estimate empirical noise
-    """
-
-    wave = np.asarray(wave)
-    flux = np.asarray(flux)
-
-    # Remove invalid values
-    mask = np.isfinite(flux)
-    if err is not None:
-        err = np.asarray(err)
-        mask &= np.isfinite(err) & (err > 0)
-
-    flux = flux[mask]
-    if err is not None:
-        err = err[mask]
-
-    results = {}
-
-    # -----------------------------
-    # (A) Noise from error array
-    # -----------------------------
-    if err is not None:
-        noise_median = np.median(err)
-        snr = flux / err
-        snr_median = np.median(snr)
-    else:
-        noise_median = np.nan
-        snr_median = np.nan
-
-    results["noise_from_err"] = noise_median
-    results["snr_median"] = snr_median
-
-
-    # -----------------------------
-    # (C) Robust SNR (median-based)
-    # -----------------------------
-    if err is not None:
-        snr_robust = np.nanmedian(flux) / np.nanmedian(err)
-    else:
-        snr_robust = np.nan
-
-    results["snr_robust"] = snr_robust
-
-
-    return results
