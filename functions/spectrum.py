@@ -248,8 +248,105 @@ def load_spectrum(
         "norm_window": norm_window if normalized else None,
         "norm_factor": norm_factor,
         "norm_error": norm_error,
-        "norm_err_mean": err_mean,
-        "norm_err_median": err_median,
+        "norm_err_mean": err_mean if normalized else None,
+        "norm_err_median": err_median if normalized else None,
         "output_flux_scale": output_flux_scale,
     }
+
+def compute_error_stats(
+    wave,
+    flux,
+    err,
+    window,
+    normalized=True,   # 🔥 controla o comportamento
+    statistic="both",
+    min_points=3
+):
+    """
+    Compute flux and error statistics in a given wavelength window.
+
+    Parameters
+    ----------
+    wave : array_like
+        Wavelength array
+    flux : array_like
+        Flux array (preferably normalized)
+    err : array_like
+        Error array (same units as flux)
+    window : tuple
+        (lambda_min, lambda_max)
+    statistic : {'mean', 'median', 'both'}
+        Which statistics to return
+    min_points : int
+        Minimum number of points required
+
+    Returns
+    -------
+    dict with statistics
+    """
+
+    wave = np.asarray(wave)
+    flux = np.asarray(flux)
+    err = np.asarray(err)
+
+    mask = (wave >= window[0]) & (wave <= window[1])
+    n = mask.sum()
+
+    # Caso NÃO esteja normalizado → tudo vira NaN
+    if not normalized:
+        return {
+            "n_points": n,
+            "flux_mean": np.nan,
+            "flux_median": np.nan,
+            "err_mean": np.nan,
+            "err_median": np.nan,
+            "err_rms": np.nan,
+            "snr": np.nan
+        }
+
+    # poucos pontos
+    if n < min_points:
+        return {
+            "n_points": n,
+            "flux_mean": np.nan,
+            "flux_median": np.nan,
+            "err_mean": np.nan,
+            "err_median": np.nan,
+            "err_rms": np.nan,
+            "snr": np.nan
+        }
+
+    flux_window = flux[mask]
+    err_window = err[mask]
+
+    results = {
+        "n_points": n,
+    }
+
+    # ---- Flux stats ----
+    if statistic in ["mean", "both"]:
+        results["flux_mean"] = np.nanmean(flux_window)
+
+    if statistic in ["median", "both"]:
+        results["flux_median"] = np.nanmedian(flux_window)
+
+    # ---- Error stats ----
+    if statistic in ["mean", "both"]:
+        results["err_mean"] = np.nanmean(err_window)
+
+    if statistic in ["median", "both"]:
+        results["err_median"] = np.nanmedian(err_window)
+
+    # ---- RMS error (mais físico) ----
+    err_rms = np.sqrt(np.nanmean(err_window**2))
+    results["err_rms"] = err_rms
+
+    # ---- SNR (definição simples e útil) ----
+    # usa fluxo médio / erro rms
+    if "flux_mean" in results and err_rms > 0:
+        results["snr"] = results["flux_mean"] / err_rms
+    else:
+        results["snr"] = np.nan
+
+    return results
 
