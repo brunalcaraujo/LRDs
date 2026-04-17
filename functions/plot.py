@@ -357,7 +357,7 @@ def plot_overlaid_spectra(
 
         if offset:
             label = short_label_from_filename(fname)
-            y_offset = 2.5 * (i - indices[0])
+            y_offset = 8.5 * (i - indices[0])
 
             y = data["flux"] + y_offset
             x = data["wave"]
