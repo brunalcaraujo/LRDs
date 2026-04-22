@@ -355,7 +355,8 @@ def compute_mean_spectrum(
     wave_grid=None,
     n_clip_end=0,
     interp_kind="linear",
-    return_error=True
+    return_error=True,
+    flux_min=None
 ):
     """
     Compute mean spectrum from a list of spectra.
@@ -370,6 +371,7 @@ def compute_mean_spectrum(
         Number of points to remove from the END of each spectrum
     interp_kind : str
         Interpolation type (currently only linear implemented)
+        ---- Later I can add other type if necessary 
     return_error : bool
         If True, compute error on the mean
 
@@ -445,6 +447,12 @@ def compute_mean_spectrum(
 
     flux_stack = np.array(flux_stack)
 
+    # -------------------------
+    # limpeza de valores ruins
+    # -------------------------
+    if flux_min is not None:
+        flux_stack[flux_stack < flux_min] = np.nan
+
     n_objects = flux_stack.shape[0]
 
     # -------------------------
@@ -469,6 +477,9 @@ def compute_mean_spectrum(
     # -------------------------
     if return_error and len(err_stack) > 0:
         err_stack = np.array(err_stack)
+
+        if flux_min is not None:
+            err_stack[flux_stack < flux_min] = np.nan
 
         # erro médio propagado (aproximação)
         err_mean = np.sqrt(np.nanmean(err_stack**2, axis=0)) / np.sqrt(n_contrib)
