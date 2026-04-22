@@ -769,3 +769,361 @@ def plot_spectrum_shaded_lines(
     fig.tight_layout()
 
     return fig, ax
+
+def plot_mean_spectrum(
+    mean_spec,
+    lines=None,
+    figsize=(8,5),
+    xlim=None,
+    ylim=None,
+    title=None,
+    spectrum_kwargs=None,
+    std_kwargs=None,
+    err_kwargs=None,
+    line_kwargs=None,
+    min_contrib=None,
+    show_std=True,    
+    show_err=False,
+):
+    """
+    Plot mean spectrum with optional std shading.
+
+    Parameters
+    ----------
+    ax : matplotlib axis
+    mean_spec : dict
+        Output of compute_mean_spectrum()
+    show_std : bool
+        Plot shaded std region
+    show_err : bool
+        Plot error on the mean
+    min_contrib : int or None
+        Mask regions with fewer contributing spectra
+    lines : dict or None
+        Emission lines {label: wavelength}
+        None → usa default
+        {} → não plota linhas
+    """
+
+    wave = mean_spec["wave"]
+    flux = mean_spec["flux_mean"]
+    std  = mean_spec.get("flux_std")
+    err  = mean_spec.get("err_mean")
+    n_contrib = mean_spec.get("n_contrib")
+
+    # -------------------------
+    # kwargs defaults
+    # -------------------------
+    if spectrum_kwargs is None:
+        spectrum_kwargs = dict(color="black", lw=1.5, where="mid")
+
+    if std_kwargs is None:
+        std_kwargs = dict(color="gray", alpha=0.3)
+
+    if err_kwargs is None:
+        err_kwargs = dict(color="red", alpha=0.2)
+
+    if line_kwargs is None:
+        line_kwargs = dict(ls="--", lw=1, alpha=0.6)
+
+    # -------------------------
+    # máscara de qualidade
+    # -------------------------
+    if min_contrib is not None and n_contrib is not None:
+        mask = n_contrib >= min_contrib
+        wave = wave[mask]
+        flux = flux[mask]
+        if std is not None:
+            std = std[mask]
+        if err is not None:
+            err = err[mask]
+
+    # -------------------------
+    # default lines
+    # -------------------------
+    if lines is None:
+        lines = {
+            r"[O II]": 0.3727,
+            r"[Ne III]": 0.386876,
+            r"H$\epsilon$": 0.3970079,
+            r"H$\delta$": 0.4101742,
+            r"H$\gamma$": 0.4340471,
+            r"H$\beta$": 0.48613,
+            r"[O III]": 0.5006843,
+            r"H$\alpha$": 0.6563,
+        }
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    # -------------------------
+    # plot espectro médio
+    # -------------------------
+    ax.step(wave, flux, **spectrum_kwargs)
+
+    # -------------------------
+    # std shading
+    # -------------------------
+    if show_std and std is not None:
+        ax.fill_between(
+            wave,
+            flux - std,
+            flux + std,
+            **std_kwargs
+        )
+
+    # -------------------------
+    # erro da média
+    # -------------------------
+    if show_err and err is not None:
+        ax.fill_between(
+            wave,
+            flux - err,
+            flux + err,
+            **err_kwargs
+        )
+
+    # -------------------------
+    # linhas de emissão
+    # -------------------------
+    if lines:  # vazio {} → não entra
+        sorted_lines = sorted(lines.items(), key=lambda x: x[1])
+
+        levels = [0.98, 0.78, 0.98, 0.78]
+        ha_lines = ['right', 'left', 'right', 'left']
+
+        prev_wave = None
+        level_index = 0
+
+        for label, wave0 in sorted_lines:
+
+            if prev_wave is not None and abs(wave0 - prev_wave) < 0.017:
+                level_index += 1
+            else:
+                level_index = 0
+
+            y = levels[level_index % len(levels)]
+            ha = ha_lines[level_index % len(ha_lines)]
+
+            # cores
+            if "H$" in label:
+                color = "red"
+                text_color = "red"
+            else:
+                color = "gray"
+                text_color = "black"
+
+            ax.axvline(wave0, color=color, **line_kwargs)
+
+            ax.text(
+                wave0,
+                y,
+                label,
+                rotation=90,
+                ha=ha,
+                va="top",
+                transform=ax.get_xaxis_transform(),
+                fontsize=11,
+                color=text_color
+            )
+
+            prev_wave = wave0
+
+    # -------------------------
+    # estética
+    # -------------------------
+    if xlim is not None:
+        ax.set_xlim(xlim)
+
+    if ylim is not None:
+        ax.set_ylim(ylim)
+
+    ax.set_xlabel(r"Rest-frame wavelength [$\mu$m]", fontsize=13)
+    ax.set_ylabel(r"Mean normalized $F_\lambda$", fontsize=13)
+
+    if title is not None:
+        ax.set_title(title, fontsize=14)
+
+    ax.grid(alpha=0.3)
+
+    ax.minorticks_on()
+
+    ax.tick_params(
+        axis="both",
+        which="major",
+        direction="in",
+        length=6,
+        width=1.2,
+        labelsize=11,
+        top=True, right=True
+    )
+
+    ax.tick_params(
+        axis="both",
+        which="minor",
+        direction="in",
+        length=3,
+        width=1,
+        top=True, right=True
+    )
+
+    for spine in ax.spines.values():
+        spine.set_linewidth(1.2)
+
+    if "n_objects" in mean_spec:
+        ax.text(
+            0.85, 0.95,
+            f"N = {mean_spec['n_objects']}",
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=11,
+            bbox=dict(facecolor='white', alpha=0.7, edgecolor='none')
+        )
+
+    fig.tight_layout()
+
+    return fig, ax
+
+def plot_overlaid_mean_spectra(
+    mean_specs,
+    xlim=(0.2, 0.6),
+    ylim=None,
+    figsize=(7, 5),
+    offset=True,
+    lines=None,
+    cmap_name="RdPu_r",
+    min_contrib=None,
+):
+    """
+    Plot overlaid mean spectra for multiple groups.
+
+    Parameters
+    ----------
+    mean_specs : dict
+        {"G1": mean_spec, "G2": mean_spec, ...}
+    offset : bool
+        Apply vertical offset to separate spectra
+    lines : dict or None
+        Emission lines {label: wavelength}
+    """
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+
+    # -------------------------
+    # cores
+    # -------------------------
+    n = len(mean_specs)
+    cmap = cm.get_cmap(cmap_name)
+    colors = cmap(np.linspace(0.0, 0.8, n))
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    ax.set_xlim(*xlim)
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+
+    xmin, xmax = ax.get_xlim()
+
+    # -------------------------
+    # linhas de emissão
+    # -------------------------
+    if lines is None:
+        lines = {
+            r"[O II]": 0.3727,
+            r"[Ne III]": 0.386876,
+            r"H$\delta$": 0.4101742,
+            r"H$\gamma$": 0.4340471,
+            r"H$\beta$": 0.48613,
+            r"[O III]": 0.5006843,
+        }
+
+    if lines:
+        for label, wave0 in lines.items():
+            ax.axvline(wave0, color="gray", ls="--", lw=0.8, alpha=0.6, zorder=0)
+
+            ax.text(
+                wave0,
+                0.98,
+                label,
+                rotation=90,
+                ha="right",
+                va="top",
+                transform=ax.get_xaxis_transform(),
+                fontsize=8,
+                color="gray"
+            )
+
+    # -------------------------
+    # plot dos grupos
+    # -------------------------
+    for j, (name, mean_spec) in enumerate(mean_specs.items()):
+
+        wave = mean_spec["wave"]
+        flux = mean_spec["flux_mean"]
+        n_contrib = mean_spec.get("n_contrib")
+
+        # máscara de qualidade
+        if min_contrib is not None and n_contrib is not None:
+            mask = n_contrib >= min_contrib
+            wave = wave[mask]
+            flux = flux[mask]
+
+        color = colors[j]
+
+        if offset:
+            y_offset = j * 1.5  # ajuste fino aqui
+            y = flux + y_offset
+
+            ax.step(wave, y, where="mid", color=color, lw=1.5)
+
+            # posição do label
+            axis_width = xmax - xmin
+            free_space = xmax - wave.max()
+
+            if free_space >= 0.2 * axis_width:
+                x_text = wave.max() * 1.01
+                ha = "left"
+            else:
+                x_text = wave.max() * 0.99
+                ha = "right"
+
+            y_text = np.nanmedian(y[-50:])  # posição robusta
+
+            ax.text(
+                x_text,
+                y_text,
+                f"{name} (N={mean_spec['n_objects']})",
+                fontsize=9,
+                ha=ha,
+                va="center"
+            )
+
+        else:
+            ax.step(
+                wave,
+                flux,
+                where="mid",
+                color=color,
+                lw=1.8,
+                label=f"{name} (N={mean_spec['n_objects']})"
+            )
+
+    # -------------------------
+    # estética
+    # -------------------------
+    ax.set_xlim(*xlim)
+
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+
+    ax.set_xlabel(r"Rest-frame wavelength [$\mu$m]")
+    ax.set_ylabel(r"Normalized Flux")
+
+    if not offset:
+        ax.legend(frameon=False)
+
+    fig.tight_layout()
+
+    return fig, ax
