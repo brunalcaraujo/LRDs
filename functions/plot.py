@@ -262,15 +262,16 @@ def plot_overlaid_spectra(
     import numpy as np
     import matplotlib.pyplot as plt
     from matplotlib import cm
+    from matplotlib.patches import Patch
 
     if loader_kwargs is None:
         loader_kwargs = {}
 
     # -------------------------
-    # cores
+    # cores (qualitativas)
     # -------------------------
     n = len(indices)
-    base_cmap = cm.get_cmap("tab10")   # colormap qualitativo
+    base_cmap = cm.get_cmap("tab10")
     colors = base_cmap.colors[:n]
 
     fig, ax = plt.subplots(figsize=figsize)
@@ -299,10 +300,8 @@ def plot_overlaid_spectra(
 
     if lines:
 
-        # ordenar linhas por comprimento de onda
         sorted_lines = sorted(lines.items(), key=lambda x: x[1])
 
-        # níveis para evitar sobreposição
         levels = [0.98, 0.88, 0.98, 0.88]
         ha_lines = ['right', 'left', 'right', 'left']
 
@@ -311,7 +310,6 @@ def plot_overlaid_spectra(
 
         for label, wave0 in sorted_lines:
 
-            # detecta proximidade entre linhas
             if prev_wave is not None and abs(wave0 - prev_wave) < 0.017:
                 level_index += 1
             else:
@@ -320,13 +318,12 @@ def plot_overlaid_spectra(
             y = levels[level_index % len(levels)]
             ha = ha_lines[level_index % len(ha_lines)]
 
-            # cor especial para linhas de H
-            if "H$" in label:
-                color = "red"
-                text_color = "red"
-            else:
+            if 'He' in label or 'H$' in label or 'Pa' in label:
                 color = "gray"
                 text_color = "black"
+            else:
+                color = "red"
+                text_color = "red"
 
             ax.axvline(
                 wave0,
@@ -381,19 +378,19 @@ def plot_overlaid_spectra(
             x = data["wave"]
             y = data["flux"] + y_offset
 
-            line = ax.step(x, y, color=color, where="mid", lw=1.5)
-
-            labels.append(label)
+            ax.step(x, y, color=color, where="mid", lw=1.5)
 
         else:
-            line = ax.step(
+            ax.step(
                 data["wave"],
                 data["flux"],
                 where='mid',
-                lw=1.2,
+                lw=1.5,
                 color=color,
-                label=label
             )
+
+        # 👇 sempre salva labels
+        labels.append(label)
 
     # -------------------------
     # labels dos eixos
@@ -402,32 +399,25 @@ def plot_overlaid_spectra(
     ax.set_ylabel(r"Normalized Flux (arbitrary units)")
 
     # -------------------------
-    # legendas
+    # legenda (sempre no topo)
     # -------------------------
-    if offset:
-        # legenda no topo com espectros
-        legend_handles = [
-            Patch(facecolor=colors[j], edgecolor='none')
-            for j in range(n)
-        ]
+    legend_handles = [
+        Patch(facecolor=colors[j], edgecolor='none')
+        for j in range(n)
+    ]
 
-        ax.legend(
-            legend_handles,
-            labels,
-            loc="lower center",
-            bbox_to_anchor=(0.5, 1.02),
-            ncol=min(n, 4),
-            frameon=False,
-            fontsize=9,
-            handlelength=1.5,
-        )
+    ax.legend(
+        legend_handles,
+        labels,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 1.02),
+        ncol=min(n, 4),
+        frameon=False,
+        fontsize=9,
+        handlelength=1.5,
+    )
 
-        fig.tight_layout(rect=[0, 0, 1, 0.92])
-
-    else:
-        # legenda normal
-        ax.legend(fontsize=9, frameon=False)
-        fig.tight_layout()
+    fig.tight_layout(rect=[0, 0, 1, 0.92])
 
     return fig
 
@@ -1108,12 +1098,12 @@ def plot_overlaid_mean_spectra(
             y = levels[level_index % len(levels)]
             ha = ha_lines[level_index % len(ha_lines)]
 
-            if "H$" in label:
-                color = "red"
-                text_color = "red"
-            else:
+            if "H$" in label or 'He' in label or 'Pa' in label:
                 color = "gray"
                 text_color = "black"
+            else:
+                color = "red"
+                text_color = "red"
 
             ax.axvline(
                 wave0,
