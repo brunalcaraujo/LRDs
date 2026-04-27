@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
+from matplotlib.patches import Patch
 import numpy as np
 from .spectrum import load_spectrum
 import os
@@ -254,94 +255,111 @@ def plot_overlaid_spectra(
     ylim=None,
     figsize=(7, 5),
     offset=True,
+    lines=None,
 ):
+
+    import os
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+
     if loader_kwargs is None:
         loader_kwargs = {}
 
-    #  # --- Fixed rest-frame emission lines (μm) ---
-    # emission_lines = {
-    #     r"[O II]": 0.3727,
-    #     r"[Ne III]": 0.386876,
-    #     r"[O III] 4363": 0.436321,
-    #     r"[O III] 5007": 0.5006843,   	
-    # }
-
-    # H_emission_lines = {
-    #     r"H$\beta$": 0.48613,
-    #     r"H$\alpha$": 0.6563,
-    #     r"H$\epsilon$": 0.3970079,
-    #     r"H$\gamma$": 0.4340471,
-    #     r"H$\delta$": 0.4101742,
-    # }
-    
+    # -------------------------
+    # cores
+    # -------------------------
     n = len(indices)
-    base_cmap = cm.get_cmap("RdPu_r")  # escolha a paleta aqui
-    colors = base_cmap(np.linspace(0.0, 0.7, n))
+    base_cmap = cm.get_cmap("tab10")   # colormap qualitativo
+    colors = base_cmap.colors[:n]
 
     fig, ax = plt.subplots(figsize=figsize)
 
-    # --- FIXO: definir limites ANTES de usar get_xlim/get_ylim ---
+    # -------------------------
+    # limites
+    # -------------------------
     ax.set_xlim(*xlim)
     if ylim is not None:
         ax.set_ylim(*ylim)
 
     xmin, xmax = ax.get_xlim()
-    ymin, ymax = ax.get_ylim()
 
-    # # --- Draw emission lines first (background) ---
-    # for label, wave0 in emission_lines.items():
-    #     ax.axvline(
-    #         wave0,
-    #         color="gray",
-    #         ls="--",
-    #         lw=0.8,
-    #         alpha=0.6,
-    #         zorder=0
-    #     )
+    # -------------------------
+    # linhas de emissão
+    # -------------------------
+    if lines is None:
+        lines = {
+            r"[O II]": 0.3727,
+            r"[Ne III]": 0.386876,
+            r"H$\delta$": 0.4101742,
+            r"H$\gamma$": 0.4340471,
+            r"H$\beta$": 0.48613,
+            r"[O III]": 0.5006843,
+        }
 
-    #     ax.text(
-    #         wave0,
-    #         0.98,
-    #         label,
-    #         rotation=90,
-    #         ha="right",
-    #         va="top",
-    #         transform=ax.get_xaxis_transform(),
-    #         fontsize=8,
-    #         color="gray"
-    #     )
+    if lines:
 
-    # # --- Draw H series emission lines first (background) ---
-    # for label, wave0 in H_emission_lines.items():
-    #     ax.axvline(
-    #         wave0,
-    #         color="deeppink",
-    #         ls="--",
-    #         lw=0.8,
-    #         alpha=0.6,
-    #         zorder=0
-    #     )
+        # ordenar linhas por comprimento de onda
+        sorted_lines = sorted(lines.items(), key=lambda x: x[1])
 
-    #     ax.text(
-    #         wave0,
-    #         0.80,
-    #         label,
-    #         rotation=90,
-    #         ha="right",
-    #         va="top",
-    #         transform=ax.get_xaxis_transform(),
-    #         fontsize=8,
-    #         color="gray"
-    #     )
+        # níveis para evitar sobreposição
+        levels = [0.98, 0.88, 0.98, 0.88]
+        ha_lines = ['right', 'left', 'right', 'left']
 
-    # --- Plot spectra ---
+        prev_wave = None
+        level_index = 0
+
+        for label, wave0 in sorted_lines:
+
+            # detecta proximidade entre linhas
+            if prev_wave is not None and abs(wave0 - prev_wave) < 0.017:
+                level_index += 1
+            else:
+                level_index = 0
+
+            y = levels[level_index % len(levels)]
+            ha = ha_lines[level_index % len(ha_lines)]
+
+            # cor especial para linhas de H
+            if "H$" in label:
+                color = "red"
+                text_color = "red"
+            else:
+                color = "gray"
+                text_color = "black"
+
+            ax.axvline(
+                wave0,
+                color=color,
+                ls="--",
+                lw=0.8,
+                alpha=0.6,
+                zorder=0
+            )
+
+            ax.text(
+                wave0,
+                y,
+                label,
+                rotation=90,
+                ha=ha,
+                va="top",
+                transform=ax.get_xaxis_transform(),
+                fontsize=8.5,
+                color=text_color
+            )
+
+            prev_wave = wave0
+
+    # -------------------------
+    # plot dos espectros
+    # -------------------------
+    labels = []
+
     for j, i in enumerate(indices):
         fname, z = spec_info[i]
-
-        color = colors[j]  # cor específica para este espectro
-
-        # Convert numpy string → Python string
         fname = str(fname)
+        color = colors[j]
 
         full_path = os.path.join(base_path, fname)
 
@@ -355,57 +373,61 @@ def plot_overlaid_spectra(
             print(f"Skipping {fname} → {e}")
             continue
 
+        label = short_label_from_filename(fname)
+
         if offset:
-            label = short_label_from_filename(fname)
             y_offset = 6.5 * (i - indices[0])
-            
 
-            y = data["flux"] + y_offset
             x = data["wave"]
+            y = data["flux"] + y_offset
 
-            #ax.plot(x, y, lw=1)
-            ax.step(x, y, color=color, where="mid", lw=1)
+            line = ax.step(x, y, color=color, where="mid", lw=1.5)
 
-            # posição do texto (lado direito do gráfico)
-            #xmin, xmax = ax.get_xlim()
-
-            axis_width = xmax - xmin
-            free_space = xmax - x.max()
-
-            if free_space >= 0.2 * axis_width: 
-                # cabe texto fora do espectro
-                x_text = x.max() * 1.01
-                ha = "left"
-            else:
-                # coloca dentro do espectro
-                x_text = x.max() * 0.99
-                ha = "right"
-
-            dy = 1.15
-            y_text = np.nanmedian(y[-100:-5]) + dy
-
-            ax.text(
-                x_text,
-                y_text,
-                label,
-                fontsize=8,
-                ha=ha,
-                va="center"
-            )
+            labels.append(label)
 
         else:
-            label = short_label_from_filename(fname)
-            ax.step(data["wave"],data["flux"],where='mid',lw=1.2,label=label)
+            line = ax.step(
+                data["wave"],
+                data["flux"],
+                where='mid',
+                lw=1.2,
+                color=color,
+                label=label
+            )
 
-    ax.set_xlim(*xlim)
-    if ylim is not None:
-        ax.set_ylim(*ylim)
-
+    # -------------------------
+    # labels dos eixos
+    # -------------------------
     ax.set_xlabel(r"Rest-frame wavelength [$\mu$m]")
     ax.set_ylabel(r"Normalized Flux (arbitrary units)")
 
-    ax.legend(fontsize=8, frameon=False)
-    fig.tight_layout()
+    # -------------------------
+    # legendas
+    # -------------------------
+    if offset:
+        # legenda no topo com espectros
+        legend_handles = [
+            Patch(facecolor=colors[j], edgecolor='none')
+            for j in range(n)
+        ]
+
+        ax.legend(
+            legend_handles,
+            labels,
+            loc="lower center",
+            bbox_to_anchor=(0.5, 1.02),
+            ncol=min(n, 4),
+            frameon=False,
+            fontsize=9,
+            handlelength=1.5,
+        )
+
+        fig.tight_layout(rect=[0, 0, 1, 0.92])
+
+    else:
+        # legenda normal
+        ax.legend(fontsize=9, frameon=False)
+        fig.tight_layout()
 
     return fig
 
@@ -994,6 +1016,8 @@ def plot_overlaid_mean_spectra(
     lines=None,
     cmap_name="RdPu_r",
     min_contrib=None,
+    colors=None,
+    show_std=False,
 ):
     """
     Plot overlaid mean spectra for multiple groups.
@@ -1016,9 +1040,33 @@ def plot_overlaid_mean_spectra(
     # cores
     # -------------------------
     n = len(mean_specs)
-    cmap = cm.get_cmap(cmap_name)
-    colors = cmap(np.linspace(0.0, 0.8, n))
+    group_names = list(mean_specs.keys())
 
+    if isinstance(colors, dict):
+        # mapeamento por nome
+        colors_map = colors
+
+        # checa se faltam grupos
+        missing = [g for g in group_names if g not in colors_map]
+        if missing:
+            raise ValueError(f"Faltam cores para os grupos: {missing}")
+
+    elif colors is not None:
+        # lista de cores
+        colors = list(colors)
+
+        if len(colors) < n:
+            raise ValueError(f"Você forneceu {len(colors)} cores, mas precisa de {n}")
+
+        colors_map = {g: colors[i] for i, g in enumerate(group_names)}
+
+    else:
+        # fallback: colormap
+        cmap = cm.get_cmap(cmap_name)
+        colors_array = cmap(np.linspace(0.0, 0.8, n))
+        colors_map = {g: colors_array[i] for i, g in enumerate(group_names)}
+
+        
     fig, ax = plt.subplots(figsize=figsize)
 
     ax.set_xlim(*xlim)
@@ -1041,67 +1089,105 @@ def plot_overlaid_mean_spectra(
         }
 
     if lines:
-        for label, wave0 in lines.items():
-            ax.axvline(wave0, color="gray", ls="--", lw=0.8, alpha=0.6, zorder=0)
+
+        sorted_lines = sorted(lines.items(), key=lambda x: x[1])
+
+        levels = [0.98, 0.88, 0.98, 0.88]
+        ha_lines = ['right', 'left', 'right', 'left']
+
+        prev_wave = None
+        level_index = 0
+
+        for label, wave0 in sorted_lines:
+
+            if prev_wave is not None and abs(wave0 - prev_wave) < 0.017:
+                level_index += 1
+            else:
+                level_index = 0
+
+            y = levels[level_index % len(levels)]
+            ha = ha_lines[level_index % len(ha_lines)]
+
+            if "H$" in label:
+                color = "red"
+                text_color = "red"
+            else:
+                color = "gray"
+                text_color = "black"
+
+            ax.axvline(
+                wave0,
+                color=color,
+                ls="--",
+                lw=0.8,
+                alpha=0.6,
+                zorder=0
+            )
 
             ax.text(
                 wave0,
-                0.98,
+                y,
                 label,
                 rotation=90,
-                ha="right",
+                ha=ha,
                 va="top",
                 transform=ax.get_xaxis_transform(),
-                fontsize=8,
-                color="gray"
+                fontsize=8.5,
+                color=text_color
             )
+
+            prev_wave = wave0
 
     # -------------------------
     # plot dos grupos
     # -------------------------
+    labels = []
+
     for j, (name, mean_spec) in enumerate(mean_specs.items()):
 
         wave = mean_spec["wave"]
         flux = mean_spec["flux_mean"]
         n_contrib = mean_spec.get("n_contrib")
+        flux_std = mean_spec.get("flux_std")
 
-        # máscara de qualidade
         if min_contrib is not None and n_contrib is not None:
             mask = n_contrib >= min_contrib
             wave = wave[mask]
             flux = flux[mask]
+            if flux_std is not None:
+                flux_std = flux_std[mask]
 
-        color = colors[j]
+        color = colors_map[name]
 
         if offset:
-            y_offset = j * 1.5  # ajuste fino aqui
+            y_offset = j * 1.5
             y = flux + y_offset
 
-            ax.step(wave, y, where="mid", color=color, lw=1.5)
+            if show_std and flux_std is not None:
+                ax.fill_between(
+                    wave,
+                    y - flux_std,
+                    y + flux_std,
+                    color=color,
+                    alpha=0.2,
+                    linewidth=0
+                )
 
-            # posição do label
-            axis_width = xmax - xmin
-            free_space = xmax - wave.max()
+            line = ax.step(wave, y, where="mid", color=color, lw=1.5)
 
-            if free_space >= 0.2 * axis_width:
-                x_text = wave.max() * 1.01
-                ha = "left"
-            else:
-                x_text = wave.max() * 0.99
-                ha = "right"
-
-            y_text = np.nanmedian(y[-50:])  # posição robusta
-
-            ax.text(
-                x_text,
-                y_text,
-                f"{name} (N={mean_spec['n_objects']})",
-                fontsize=9,
-                ha=ha,
-                va="center"
-            )
+            labels.append(f"{name} (N={mean_spec['n_objects']})")
 
         else:
+            if show_std and flux_std is not None:
+                ax.fill_between(
+                    wave,
+                    flux - flux_std,
+                    flux + flux_std,
+                    color=color,
+                    alpha=0.2,
+                    linewidth=0
+                )
+
             ax.step(
                 wave,
                 flux,
@@ -1114,17 +1200,35 @@ def plot_overlaid_mean_spectra(
     # -------------------------
     # estética
     # -------------------------
-    ax.set_xlim(*xlim)
-
-    if ylim is not None:
-        ax.set_ylim(*ylim)
-
     ax.set_xlabel(r"Rest-frame wavelength [$\mu$m]")
-    ax.set_ylabel(r"Normalized Flux")
+    ax.set_ylabel(r"Mean Normalized Flux")
 
-    if not offset:
-        ax.legend(frameon=False)
 
-    fig.tight_layout()
+    # legenda com quadradinhos
+    if offset:
+        legend_labels = labels
+        legend_colors = [colors_map[name] for name in group_names]
+    else:
+        legend_labels = [f"{name} (N={mean_specs[name]['n_objects']})" for name in group_names]
+        legend_colors = [colors_map[name] for name in group_names]
+
+    legend_handles = [
+        Patch(facecolor=c, edgecolor='none')
+        for c in legend_colors
+    ]
+
+    ax.legend(
+        legend_handles,
+        legend_labels,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 1.02),
+        ncol=min(n, 4),
+        frameon=False,
+        fontsize=11,
+        handlelength=1.5,
+    )
+
+    fig.tight_layout(rect=[0, 0, 1, 0.92])
+
 
     return fig, ax
