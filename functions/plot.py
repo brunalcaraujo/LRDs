@@ -992,6 +992,15 @@ def plot_mean_spectrum(
             fontsize=11,
             bbox=dict(facecolor='white', alpha=0.7, edgecolor='none')
         )
+        ax.text(
+            0.85, 0.90,
+            f"min={min_contrib}",
+            transform=ax.transAxes,
+            ha="left",
+            va="top",
+            fontsize=11,
+            bbox=dict(facecolor='white', alpha=0.7, edgecolor='none')
+        )
 
     fig.tight_layout()
 
