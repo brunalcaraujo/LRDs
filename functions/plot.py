@@ -9,6 +9,7 @@ import os
 def plot_spectrum_ax(
     ax,
     spectrum,
+    show_emission_lines=True,
     xlim=None,
     ylim=None,
     title=None,
@@ -46,52 +47,52 @@ def plot_spectrum_ax(
         r"H$\gamma$": 0.4340471,
         r"H$\delta$": 0.4101742,
     }
-    
-    # --- Draw emission lines first (background) ---
-    for label, wave0 in emission_lines.items():
-        ax.axvline(
-            wave0,
-            color="black",
-            ls="--",
-            lw=0.8,
-            alpha=0.7,
-            zorder=0
-        )
+    if show_emission_lines:
+        # --- Draw emission lines first (background) ---
+        for label, wave0 in emission_lines.items():
+            ax.axvline(
+                wave0,
+                color="black",
+                ls="--",
+                lw=0.8,
+                alpha=0.7,
+                zorder=0
+            )
 
-        ax.text(
-            wave0,
-            0.98,
-            label,
-            rotation=90,
-            ha="right",
-            va="top",
-            transform=ax.get_xaxis_transform(),
-            fontsize=8,
-            color="gray"
-        )
+            ax.text(
+                wave0,
+                0.98,
+                label,
+                rotation=90,
+                ha="right",
+                va="top",
+                transform=ax.get_xaxis_transform(),
+                fontsize=8,
+                color="gray"
+            )
 
-    # --- Draw H series emission lines first (background) ---
-    for label, wave0 in H_emission_lines.items():
-        ax.axvline(
-            wave0,
-            color="deeppink",
-            ls="--",
-            lw=0.8,
-            alpha=0.7,
-            zorder=0
-        )
+        # --- Draw H series emission lines first (background) ---
+        for label, wave0 in H_emission_lines.items():
+            ax.axvline(
+                wave0,
+                color="deeppink",
+                ls="--",
+                lw=0.8,
+                alpha=0.7,
+                zorder=0
+            )
 
-        ax.text(
-            wave0,
-            0.78,
-            label,
-            rotation=90,
-            ha="right",
-            va="top",
-            transform=ax.get_xaxis_transform(),
-            fontsize=8,
-            color="deeppink"
-        )
+            ax.text(
+                wave0,
+                0.78,
+                label,
+                rotation=90,
+                ha="right",
+                va="top",
+                transform=ax.get_xaxis_transform(),
+                fontsize=8,
+                color="deeppink"
+            )
 
     ax.step(
         spectrum["wave"],
