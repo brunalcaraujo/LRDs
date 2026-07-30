@@ -1232,3 +1232,228 @@ def plot_overlaid_mean_spectra(
 
 
     return fig, ax
+
+
+def plot_stacked_spectra_with_mean(
+    spec_info,
+    indices,
+    mean_spec,
+    min_contrib=None,
+    base_path="DeGraaff_espectros",
+    loader_kwargs=None,
+    xlim=(0.2, 0.6),
+    figsize=(8, 8),
+    offset_step=3.0,
+    color_mode="sequential",
+    cmap_name="viridis",
+    custom_colors=None,
+    ylim_top=None,
+    ylim_bottom=None,
+    group_name='group',
+):
+    """
+    Painel superior:
+        espectros individuais com offset vertical.
+
+    Painel inferior:
+        espectro médio.
+
+    Parameters
+    ----------
+    spec_info : list
+        Lista [(fname,z), ...]
+    indices : list
+        Índices dos objetos a plotar
+    mean_spec : dict
+        Saída de compute_mean_spectrum()
+    """
+
+    import os
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+
+    if loader_kwargs is None:
+        loader_kwargs = {}
+
+
+    n = len(indices)
+
+    if color_mode == "qualitative":
+
+        cmap = cm.get_cmap("tab10")
+        colors = cmap.colors[:min(n, 10)]
+
+        if n > 10:
+            colors = cmap(np.linspace(0, 1, n))
+
+    elif color_mode == "sequential":
+
+        cmap = cm.get_cmap(cmap_name)
+        colors = cmap(np.linspace(0.05, 0.95, n))
+
+    elif color_mode == "custom":
+
+        colors = custom_colors
+
+    else:
+        raise ValueError(
+            "color_mode must be "
+            "'qualitative', 'sequential' or 'custom'"
+        )
+
+    # -------------------------
+    # figura
+    # -------------------------
+    fig = plt.figure(figsize=figsize)
+
+    gs = fig.add_gridspec(
+        2, 1,
+        height_ratios=[4, 1],
+        hspace=0.05
+    )
+
+    ax_top = fig.add_subplot(gs[0])
+    ax_bot = fig.add_subplot(gs[1], sharex=ax_top)
+
+    # -------------------------
+    # espectros individuais
+    # -------------------------
+    labels = []
+
+    for j, i in enumerate(indices):
+
+        fname, z = spec_info[i]
+
+        spec = load_spectrum(
+            os.path.join(base_path, fname),
+            z=z,
+            **loader_kwargs
+        )
+
+        y_offset = j * offset_step
+
+        ax_top.step(
+            spec["wave"],
+            spec["flux"] + y_offset,
+            where="mid",
+            lw=1.3,
+            color=colors[j]
+        )
+
+        labels.append(short_label_from_filename(fname))
+
+    # -------------------------
+    # espectro médio
+    # -------------------------
+
+    wave = mean_spec["wave"]
+    flux = mean_spec["flux_mean"]
+
+    if min_contrib is not None:
+        mask = mean_spec["n_contrib"] >= min_contrib
+
+        wave = wave.copy()
+        flux = flux.copy()
+
+        flux[~mask] = np.nan
+
+    ax_bot.step(
+        wave,
+        flux,
+        where="mid",
+        color="black",
+        lw=1.6
+    )
+
+    std = mean_spec["flux_std"].copy()
+
+    if min_contrib is not None:
+        std[~mask] = np.nan
+
+    ax_bot.fill_between(
+        wave,
+        flux - std,
+        flux + std,
+        color="gray",
+        alpha=0.25
+    )
+
+    # -------------------------
+    # linhas de emissão
+    # -------------------------
+    lines = {
+        #r"[O II]": 0.3727,
+        #r"[Ne III]": 0.386876,
+        r"H$\delta$": 0.4101742,
+        r"H$\gamma$": 0.4340471,
+        r"H$\beta$": 0.48613,
+        #r"[O III]": 0.5006843,
+        r"H$\alpha$": 0.6563,
+    }
+
+    for ax in [ax_top, ax_bot]:
+        for label, wave0 in lines.items():
+
+            ax.axvline(
+                wave0,
+                color="gray",
+                ls="--",
+                lw=0.8,
+                alpha=0.5,
+                zorder=0
+            )
+
+    # labels apenas no painel superior
+    for label, wave0 in lines.items():
+        ax_top.text(
+            wave0,
+            0.98,
+            label,
+            rotation=90,
+            transform=ax_top.get_xaxis_transform(),
+            va="top",
+            ha="right",
+            fontsize=8
+        )
+
+    # -------------------------
+    # estética
+    # -------------------------
+    ax_top.set_xlim(*xlim)
+
+    ax_top.set_ylabel("Normalized Flux + offset")
+    ax_bot.set_ylabel("Mean")
+    ax_bot.set_xlabel(r"Rest-frame wavelength [$\mu$m]")
+
+    ax_top.tick_params(labelbottom=False)
+
+    ax_top.grid(alpha=0.2)
+    ax_bot.grid(alpha=0.2)
+
+    ax_top.text(
+        0.97, 0.95,
+        f"{group_name} (N={len(indices)})",
+        transform=ax_top.transAxes,
+        ha="right",
+        va="top",
+        fontsize=12
+    )
+
+    # legenda
+    # ax_top.legend(
+    #     labels,
+    #     loc="upper right",
+    #     fontsize=8,
+    #     frameon=False
+    # )
+
+    if ylim_top is not None:
+        ax_top.set_ylim(*ylim_top)
+
+    if ylim_bottom is not None:
+        ax_bot.set_ylim(*ylim_bottom)
+
+    fig.tight_layout()
+
+    return fig, (ax_top, ax_bot)
