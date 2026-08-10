@@ -1250,6 +1250,8 @@ def plot_stacked_spectra_with_mean(
     ylim_top=None,
     ylim_bottom=None,
     group_name='group',
+    lines=None,
+    trim_last_points=0,
 ):
     """
     Painel superior:
@@ -1331,6 +1333,11 @@ def plot_stacked_spectra_with_mean(
             **loader_kwargs
         )
 
+        # remove os últimos N pontos
+        if trim_last_points > 0:
+            spec["wave"] = spec["wave"][:-trim_last_points]
+            spec["flux"] = spec["flux"][:-trim_last_points]
+
         y_offset = j * offset_step
 
         ax_top.step(
@@ -1382,41 +1389,80 @@ def plot_stacked_spectra_with_mean(
     # -------------------------
     # linhas de emissão
     # -------------------------
-    lines = {
-        #r"[O II]": 0.3727,
-        #r"[Ne III]": 0.386876,
-        r"H$\delta$": 0.4101742,
-        r"H$\gamma$": 0.4340471,
-        r"H$\beta$": 0.48613,
-        #r"[O III]": 0.5006843,
-        r"H$\alpha$": 0.6563,
-    }
+    if lines is None:
+        lines = {
+            r"[O II]": 0.3727,
+            r"[Ne III]": 0.386876,
+            r"H$\delta$": 0.4101742,
+            r"H$\gamma$": 0.4340471,
+            r"H$\beta$": 0.48613,
+            r"[O III]": 0.5006843,
+            r"H$\alpha$": 0.6563,
+        }
 
-    for ax in [ax_top, ax_bot]:
-        for label, wave0 in lines.items():
+    if lines:
 
-            ax.axvline(
-                wave0,
-                color="gray",
-                ls="--",
-                lw=0.8,
-                alpha=0.5,
-                zorder=0
-            )
-
-    # labels apenas no painel superior
-    for label, wave0 in lines.items():
-        ax_top.text(
-            wave0,
-            0.98,
-            label,
-            rotation=90,
-            transform=ax_top.get_xaxis_transform(),
-            va="top",
-            ha="right",
-            fontsize=8
+        sorted_lines = sorted(
+            lines.items(),
+            key=lambda x: x[1]
         )
 
+        levels = [0.98, 0.90, 0.98, 0.90]
+        ha_lines = ['right', 'left', 'right', 'left']
+
+        prev_wave = None
+        level_index = 0
+
+        for label, wave0 in sorted_lines:
+
+            if prev_wave is not None and abs(wave0 - prev_wave) < 0.017:
+                level_index += 1
+            else:
+                level_index = 0
+
+            y = levels[level_index % len(levels)]
+            ha = ha_lines[level_index % len(ha_lines)]
+
+            # -------------------------
+            # cor das linhas
+            # -------------------------
+            if "H$" in label or "He" in label or "Pa" in label:
+                color = "gray"
+                text_color = "black"
+            else:
+                color = "red"
+                text_color = "red"
+
+            # -------------------------
+            # linha nos dois painéis
+            # -------------------------
+            for ax in [ax_top, ax_bot]:
+
+                ax.axvline(
+                    wave0,
+                    color=color,
+                    ls="--",
+                    lw=0.8,
+                    alpha=0.6,
+                    zorder=0
+                )
+
+            # -------------------------
+            # label somente no painel superior
+            # -------------------------
+            ax_top.text(
+                wave0,
+                y,
+                label,
+                rotation=90,
+                ha=ha,
+                va="top",
+                transform=ax_top.get_xaxis_transform(),
+                fontsize=8.5,
+                color=text_color
+            )
+
+            prev_wave = wave0
     # -------------------------
     # estética
     # -------------------------
@@ -1428,16 +1474,16 @@ def plot_stacked_spectra_with_mean(
 
     ax_top.tick_params(labelbottom=False)
 
-    ax_top.grid(alpha=0.2)
-    ax_bot.grid(alpha=0.2)
+    ax_top.grid(alpha=0.1)
+    ax_bot.grid(alpha=0.1)
 
     ax_top.text(
-        0.97, 0.95,
+        0.15, 0.90,
         f"{group_name} (N={len(indices)})",
         transform=ax_top.transAxes,
         ha="right",
         va="top",
-        fontsize=12
+        fontsize=11
     )
 
     # legenda
