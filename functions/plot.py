@@ -374,7 +374,7 @@ def plot_overlaid_spectra(
         label = short_label_from_filename(fname)
 
         if offset:
-            y_offset = 6.5 * (i - indices[0])
+            y_offset = 9.5 * (i - indices[0])
 
             x = data["wave"]
             y = data["flux"] + y_offset
@@ -1474,8 +1474,8 @@ def plot_stacked_spectra_with_mean(
 
     ax_top.tick_params(labelbottom=False)
 
-    ax_top.grid(alpha=0.1)
-    ax_bot.grid(alpha=0.1)
+    # ax_top.grid(alpha=0.1)
+    # ax_bot.grid(alpha=0.1)
 
     ax_top.text(
         0.15, 0.90,
