@@ -272,7 +272,7 @@ def plot_overlaid_spectra(
     # cores (qualitativas)
     # -------------------------
     n = len(indices)
-    base_cmap = cm.get_cmap("tab10")
+    base_cmap = cm.get_cmap("tab20")
     colors = base_cmap.colors[:n]
 
     fig, ax = plt.subplots(figsize=figsize)
