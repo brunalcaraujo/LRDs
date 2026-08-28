@@ -242,7 +242,7 @@ def short_label_from_filename(fname):
     survey = base.split("-")[0]
 
     # pega os dois últimos blocos separados por "_"
-    id_part = "_".join(base.split("_")[-2:])
+    id_part = "_".join(base.split("_")[-1:])
 
     return f"{survey}-{id_part}"
 
@@ -1218,7 +1218,7 @@ def plot_overlaid_mean_spectra(
     ]
 
     ax.legend(
-        legend_handles,
+        #legend_handles,
         legend_labels,
         loc="lower center",
         bbox_to_anchor=(0.5, 1.02),
@@ -1238,6 +1238,7 @@ def plot_stacked_spectra_with_mean(
     spec_info,
     indices,
     mean_spec,
+    df_best,
     min_contrib=None,
     base_path="DeGraaff_espectros",
     loader_kwargs=None,
@@ -1252,6 +1253,7 @@ def plot_stacked_spectra_with_mean(
     group_name='group',
     lines=None,
     trim_last_points=0,
+    show_legend=False,
 ):
     """
     Painel superior:
@@ -1283,10 +1285,10 @@ def plot_stacked_spectra_with_mean(
 
     if color_mode == "qualitative":
 
-        cmap = cm.get_cmap("tab10")
-        colors = cmap.colors[:min(n, 10)]
+        cmap = cm.get_cmap(cmap_name)
+        colors = cmap.colors[:min(n, len(cmap.colors))]
 
-        if n > 10:
+        if n > len(cmap.colors):
             colors = cmap(np.linspace(0, 1, n))
 
     elif color_mode == "sequential":
@@ -1348,7 +1350,14 @@ def plot_stacked_spectra_with_mean(
             color=colors[j]
         )
 
-        labels.append(short_label_from_filename(fname))
+        group = df_best.loc[
+            df_best["file"] == fname,
+            "grupos"
+        ].iloc[0]
+
+        labels.append(
+            f"{short_label_from_filename(fname)} ({group})"
+        )
 
     # -------------------------
     # espectro médio
@@ -1486,13 +1495,16 @@ def plot_stacked_spectra_with_mean(
         fontsize=11
     )
 
-    # legenda
-    # ax_top.legend(
-    #     labels,
-    #     loc="upper right",
-    #     fontsize=8,
-    #     frameon=False
-    # )
+    if show_legend:
+        ax_top.legend(
+            labels,
+            loc="lower center",
+            bbox_to_anchor=(0.5, 1.02),
+            fontsize=8,
+            frameon=False,
+            ncol=5,
+            handlelength=1.5,
+            )
 
     if ylim_top is not None:
         ax_top.set_ylim(*ylim_top)
