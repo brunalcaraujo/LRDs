@@ -1218,11 +1218,11 @@ def plot_overlaid_mean_spectra(
     ]
 
     ax.legend(
-        #legend_handles,
+        legend_handles,
         legend_labels,
         loc="lower center",
         bbox_to_anchor=(0.5, 1.02),
-        ncol=min(n, 4),
+        ncol=min(n, 5),
         frameon=False,
         fontsize=11,
         handlelength=1.5,
@@ -1502,7 +1502,7 @@ def plot_stacked_spectra_with_mean(
             bbox_to_anchor=(0.5, 1.02),
             fontsize=8,
             frameon=False,
-            ncol=5,
+            ncol=4,
             handlelength=1.5,
             )
 
