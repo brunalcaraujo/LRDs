@@ -1,0 +1,11 @@
+Description: 
+
+This table contains spectroscopic measurements and derived properties for a sample of Little Red Dot (LRD) candidates observed with JWST/NIRSpec in PRISM/CLEAR mode, drawn from the Dawn JWST Archive (DJA). 
+
+Spectra were normalised using the median flux in the rest-frame 3446–3646 Å window before fitting. 
+
+Emission-line fluxes and line ratios were taken from the catalogue published in de Graaff et al. (2026; https://zenodo.org/records/17665942; https://arxiv.org/abs/2511.21820), where they were obtained from simultaneous broad+narrow Gaussian decomposition of the Balmer lines and [O III] complex.
+
+Objects are grouped into five bins (B1–B5) based on their spectral properties as described in the paper.
+
+
