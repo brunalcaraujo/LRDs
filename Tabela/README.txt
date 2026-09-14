@@ -1,10 +1,8 @@
-File description of storchibergmann_lrds_2026.csv (Storchi Bergmann et al. 2026)
+Description of storchibergmann_lrds_2026.csv (Storchi Bergmann et al. 2026)
 This file contains 78 entries.
 
 Column              Unit            Description
 pid                 -               JWST program ID
-srcid               -               MSA ID number
-root                -               DJA root name
 filename            -               DJA filename
 z                   -               Spectroscopic redshift
 norm_factor         -               Normalization factor: median of the spectra within the 3446-3646 AA spectral window
