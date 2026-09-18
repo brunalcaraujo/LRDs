@@ -487,3 +487,156 @@ def compute_mean_spectrum(
         results["err_mean"] = err_mean
 
     return results
+
+def compute_median_spectrum(
+    spectra_list,
+    wave_grid=None,
+    n_clip_end=0,
+    interp_kind="linear",
+    return_error=True,
+    flux_min=None
+):
+    """
+    Compute median spectrum from a list of spectra.
+
+    Parameters
+    ----------
+    spectra_list : list of dict
+        Output of load_spectrum()
+
+    wave_grid : array_like or None
+        Common wavelength grid. If None, will be auto-generated.
+
+    n_clip_end : int
+        Number of points to remove from the END of each spectrum.
+
+    interp_kind : str
+        Interpolation type (currently only linear implemented).
+
+    return_error : bool
+        If True, compute an approximate error on the median.
+
+    flux_min : float or None
+        Minimum allowed flux. Values below this are set to NaN.
+
+    Returns
+    -------
+    dict with:
+        wave
+        flux_median
+        flux_std
+        err_median (optional)
+        n_contrib
+        n_objects
+    """
+
+    # -------------------------
+    # 1. construir grade comum
+    # -------------------------
+    if wave_grid is None:
+
+        wmins = [np.nanmin(s["wave"]) for s in spectra_list]
+        wmaxs = [np.nanmax(s["wave"]) for s in spectra_list]
+
+        wmin = np.nanmin(wmins)
+        wmax = np.nanmax(wmaxs)
+
+        # resolução baseada no primeiro espectro
+        ref_wave = spectra_list[0]["wave"]
+        dw = np.nanmedian(np.diff(ref_wave))
+
+        wave_grid = np.arange(wmin, wmax, dw)
+
+    wave_grid = np.asarray(wave_grid)
+
+    # -------------------------
+    # 2. interpolar espectros
+    # -------------------------
+    flux_stack = []
+    err_stack = []
+
+    for spec in spectra_list:
+
+        wave = spec["wave"]
+        flux = spec["flux"]
+        err = spec["err"]
+
+        # cortar final ruidoso
+        if n_clip_end > 0:
+            wave = wave[:-n_clip_end]
+            flux = flux[:-n_clip_end]
+
+            if err is not None:
+                err = err[:-n_clip_end]
+
+        # interpolação
+        flux_interp = np.interp(
+            wave_grid,
+            wave,
+            flux,
+            left=np.nan,
+            right=np.nan
+        )
+
+        flux_stack.append(flux_interp)
+
+        if return_error and err is not None:
+
+            err_interp = np.interp(
+                wave_grid,
+                wave,
+                err,
+                left=np.nan,
+                right=np.nan
+            )
+
+            err_stack.append(err_interp)
+
+    flux_stack = np.array(flux_stack)
+
+    # -------------------------
+    # 3. limpeza de valores ruins
+    # -------------------------
+    if flux_min is not None:
+        flux_stack[flux_stack < flux_min] = np.nan
+
+    n_objects = flux_stack.shape[0]
+
+    # -------------------------
+    # 4. mediana ignorando NaN
+    # -------------------------
+    flux_median = np.nanmedian(flux_stack, axis=0)
+
+    # dispersão dos espectros
+    flux_std = np.nanstd(flux_stack, axis=0)
+
+    # quantos espectros contribuíram em cada pixel
+    n_contrib = np.sum(~np.isnan(flux_stack), axis=0)
+
+    results = {
+        "wave": wave_grid,
+        "flux_median": flux_median,
+        "flux_std": flux_std,
+        "n_contrib": n_contrib,
+        "n_objects": n_objects
+    }
+
+    # -------------------------
+    # 5. erro aproximado da mediana
+    # -------------------------
+    if return_error and len(err_stack) > 0:
+
+        err_stack = np.array(err_stack)
+
+        if flux_min is not None:
+            err_stack[flux_stack < flux_min] = np.nan
+
+        # erro típico dos espectros
+        err_median = (
+            np.sqrt(np.nanmean(err_stack**2, axis=0))
+            / np.sqrt(n_contrib)
+        )
+
+        results["err_median"] = err_median
+
+    return results

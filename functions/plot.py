@@ -1515,3 +1515,340 @@ def plot_stacked_spectra_with_mean(
     fig.tight_layout()
 
     return fig, (ax_top, ax_bot)
+
+def plot_overlaid_median_spectra(
+    median_specs,
+    xlim=(0.2, 0.6),
+    ylim=None,
+    figsize=(7, 5),
+    offset=True,
+    lines=None,
+    cmap_name="RdPu_r",
+    min_contrib=None,
+    colors=None,
+    show_std=False,
+):
+    """
+    Plot overlaid median spectra for multiple groups.
+
+    Parameters
+    ----------
+    median_specs : dict
+        {"G1": median_spec, "G2": median_spec, ...}
+
+    xlim : tuple
+        Wavelength limits.
+
+    ylim : tuple or None
+        Y-axis limits.
+
+    figsize : tuple
+        Figure size.
+
+    offset : bool
+        Apply vertical offset to separate spectra.
+
+    lines : dict or None
+        Emission lines {label: wavelength}.
+
+    cmap_name : str
+        Colormap used when colors are not provided.
+
+    min_contrib : int or None
+        Minimum number of spectra contributing to a pixel.
+
+    colors : dict, list, or None
+        Colors for each group.
+
+    show_std : bool
+        If True, show ±1 standard deviation around the median.
+    """
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib import cm
+    from matplotlib.patches import Patch
+
+    # -------------------------
+    # cores
+    # -------------------------
+    n = len(median_specs)
+    group_names = list(median_specs.keys())
+
+    if isinstance(colors, dict):
+
+        colors_map = colors
+
+        missing = [
+            g for g in group_names
+            if g not in colors_map
+        ]
+
+        if missing:
+            raise ValueError(
+                f"Faltam cores para os grupos: {missing}"
+            )
+
+    elif colors is not None:
+
+        colors = list(colors)
+
+        if len(colors) < n:
+            raise ValueError(
+                f"Você forneceu {len(colors)} cores, "
+                f"mas precisa de {n}"
+            )
+
+        colors_map = {
+            g: colors[i]
+            for i, g in enumerate(group_names)
+        }
+
+    else:
+
+        cmap = cm.get_cmap(cmap_name)
+
+        colors_array = cmap(
+            np.linspace(0.0, 0.8, n)
+        )
+
+        colors_map = {
+            g: colors_array[i]
+            for i, g in enumerate(group_names)
+        }
+
+    # -------------------------
+    # figura
+    # -------------------------
+    fig, ax = plt.subplots(figsize=figsize)
+
+    ax.set_xlim(*xlim)
+
+    if ylim is not None:
+        ax.set_ylim(*ylim)
+
+    xmin, xmax = ax.get_xlim()
+
+    # -------------------------
+    # linhas de emissão
+    # -------------------------
+    if lines is None:
+        lines = {
+            r"[O II]": 0.3727,
+            r"[Ne III]": 0.386876,
+            r"H$\delta$": 0.4101742,
+            r"H$\gamma$": 0.4340471,
+            r"H$\beta$": 0.48613,
+            r"[O III]": 0.5006843,
+        }
+
+    if lines:
+
+        sorted_lines = sorted(
+            lines.items(),
+            key=lambda x: x[1]
+        )
+
+        levels = [0.98, 0.88, 0.98, 0.88]
+        ha_lines = ["right", "left", "right", "left"]
+
+        prev_wave = None
+        level_index = 0
+
+        for label, wave0 in sorted_lines:
+
+            if (
+                prev_wave is not None
+                and abs(wave0 - prev_wave) < 0.017
+            ):
+                level_index += 1
+            else:
+                level_index = 0
+
+            y = levels[level_index % len(levels)]
+            ha = ha_lines[level_index % len(ha_lines)]
+
+            if (
+                "H$" in label
+                or "He" in label
+                or "Pa" in label
+            ):
+                line_color = "gray"
+                text_color = "black"
+            else:
+                line_color = "red"
+                text_color = "red"
+
+            ax.axvline(
+                wave0,
+                color=line_color,
+                ls="--",
+                lw=0.8,
+                alpha=0.6,
+                zorder=0
+            )
+
+            ax.text(
+                wave0,
+                y,
+                label,
+                rotation=90,
+                ha=ha,
+                va="top",
+                transform=ax.get_xaxis_transform(),
+                fontsize=8.5,
+                color=text_color
+            )
+
+            prev_wave = wave0
+
+    # -------------------------
+    # plot dos grupos
+    # -------------------------
+    labels = []
+
+    for j, (name, median_spec) in enumerate(
+        median_specs.items()
+    ):
+
+        wave = median_spec["wave"]
+
+        # >>> mediana <<<
+        flux = median_spec["flux_median"]
+
+        n_contrib = median_spec.get("n_contrib")
+        flux_std = median_spec.get("flux_std")
+
+        # -------------------------
+        # mínimo de contribuições
+        # -------------------------
+        if (
+            min_contrib is not None
+            and n_contrib is not None
+        ):
+
+            mask = n_contrib >= min_contrib
+
+            wave = wave[mask]
+            flux = flux[mask]
+
+            if flux_std is not None:
+                flux_std = flux_std[mask]
+
+        color = colors_map[name]
+
+        # -------------------------
+        # com offset
+        # -------------------------
+        if offset:
+
+            y_offset = j * 1.5
+            y = flux + y_offset
+
+            if show_std and flux_std is not None:
+
+                ax.fill_between(
+                    wave,
+                    y - flux_std,
+                    y + flux_std,
+                    color=color,
+                    alpha=0.2,
+                    linewidth=0
+                )
+
+            ax.step(
+                wave,
+                y,
+                where="mid",
+                color=color,
+                lw=1.5
+            )
+
+            labels.append(
+                f"{name} (N={median_spec['n_objects']})"
+            )
+
+        # -------------------------
+        # sem offset
+        # -------------------------
+        else:
+
+            if show_std and flux_std is not None:
+
+                ax.fill_between(
+                    wave,
+                    flux - flux_std,
+                    flux + flux_std,
+                    color=color,
+                    alpha=0.2,
+                    linewidth=0
+                )
+
+            ax.step(
+                wave,
+                flux,
+                where="mid",
+                color=color,
+                lw=1.8,
+                label=f"{name} (N={median_spec['n_objects']})"
+            )
+
+    # -------------------------
+    # estética
+    # -------------------------
+    ax.set_xlabel(
+        r"Rest-frame wavelength [$\mu$m]"
+    )
+
+    ax.set_ylabel(
+        r"Median Normalized Flux"
+    )
+
+    # -------------------------
+    # legenda
+    # -------------------------
+    if offset:
+
+        legend_labels = labels
+
+        legend_colors = [
+            colors_map[name]
+            for name in group_names
+        ]
+
+    else:
+
+        legend_labels = [
+            f"{name} (N={median_specs[name]['n_objects']})"
+            for name in group_names
+        ]
+
+        legend_colors = [
+            colors_map[name]
+            for name in group_names
+        ]
+
+    legend_handles = [
+        Patch(
+            facecolor=c,
+            edgecolor="none"
+        )
+        for c in legend_colors
+    ]
+
+    ax.legend(
+        legend_handles,
+        legend_labels,
+        loc="lower center",
+        bbox_to_anchor=(0.5, 1.02),
+        ncol=min(n, 5),
+        frameon=False,
+        fontsize=11,
+        handlelength=1.5,
+    )
+
+    fig.tight_layout(
+        rect=[0, 0, 1, 0.92]
+    )
+
+    return fig, ax
